@@ -1,0 +1,16 @@
+{
+  "name": "snake",
+  "module": "index.ts",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "nodemon": "^3.1.4",
+    "tailwindcss": "^3.4.10"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "scripts": {
+    "dev": "bun nodemon"
+  },
+  "type": "module"
+}

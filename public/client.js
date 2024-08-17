@@ -1,0 +1,1 @@
+function b(x,m,w){const a=document.createElement(x);if(m)Object.keys(m).forEach((t)=>a[t]=m[t]);if(w?.length)a.append(...w.filter((t)=>t!=null));return a}document.body.appendChild(b("h1",{textContent:"hello world",className:"bg-red-500 text-white"}));
