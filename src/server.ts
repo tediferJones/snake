@@ -1,10 +1,8 @@
-import type { ServerWebSocket } from 'bun';
-
-interface ClientData {
-  gameCode: string
-}
-
-type ClientSocket = ServerWebSocket<ClientData>;
+import type {
+  ClientData,
+  GameData,
+  StrIdxObj
+} from './types';
 
 await Bun.build({
   entrypoints: [ 'src/client.ts' ],
@@ -15,13 +13,27 @@ await Bun.build({
 
 Bun.spawnSync('bunx tailwindcss -i src/globals.css -o public/style.css --minify'.split(' '))
 
-const allGames: { [key: string]: ClientSocket[] } = {}
+const allGames: StrIdxObj<GameData> = {}
+
+function getClientMsg(gameCode: string) {
+  const newPlayers: StrIdxObj<ClientData> = {}
+  Object.keys(allGames[gameCode].players).forEach(uuid => {
+    newPlayers[uuid] = allGames[gameCode].players[uuid].data
+  })
+  return {
+    ...allGames[gameCode],
+    players: newPlayers
+  }
+}
 
 Bun.serve<ClientData>({
   fetch: async (req, server) => {
     console.log(new URL(req.url))
     let { pathname, searchParams } = new URL(req.url);
-    if (server.upgrade(req, { data: { gameCode: searchParams.get('gameCode') } })) return
+    if (server.upgrade(req, { data: {
+      gameCode: searchParams.get('gameCode'),
+      color: searchParams.get('color')
+    } })) return
 
     if (pathname === '/') pathname = '/index.html';
     console.log(pathname);
@@ -37,17 +49,29 @@ Bun.serve<ClientData>({
       console.log(msg)
     },
     open: (ws) => {
-      console.log('OPENED', ws)
       const game = allGames[ws.data.gameCode];
+      let uuid = crypto.randomUUID();
       if (game) {
-        game.push(ws)
+        while (game.players[uuid]) uuid = crypto.randomUUID()
+        game.players[uuid] = ws
       } else {
-        allGames[ws.data.gameCode] = [ ws ]
+        allGames[ws.data.gameCode] = {
+          boardSize: 10,
+          players: {
+            [uuid]: ws
+          }
+        }
       }
-      ws.send(`connected to ${ws.data.gameCode}`)
+      ws.data.uuid = uuid;
+      ws.data.length = 1;
+      ws.data.row = Math.floor(Math.random() * allGames[ws.data.gameCode].boardSize)
+      ws.data.col = Math.floor(Math.random() * allGames[ws.data.gameCode].boardSize)
+      ws.send(JSON.stringify(getClientMsg(ws.data.gameCode)))
+      console.log('OPENED', allGames)
     },
     close: (ws, code, reason) => {
-      console.log('CLOSED')
+      delete allGames[ws.data.gameCode].players[ws.data.uuid]
+      console.log('CLOSED', allGames)
     }
   }
 });
