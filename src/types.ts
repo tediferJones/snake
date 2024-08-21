@@ -1,20 +1,19 @@
 import type { ServerWebSocket } from 'bun';
 
+export type Coordinate<T = number> = {
+  row: T,
+  col: T,
+}
+
 export type ClientData = {
   gameCode: string,
   uuid: string,
   length: number,
   color: string,
-  corners: { row: number, col: number }[],
+  corners: Coordinate[],
   state: 'playing' | 'gameover',
-  pos: {
-    row: number,
-    col: number,
-  },
-  dir: {
-    row: -1 | 0 | 1,
-    col: -1 | 0 | 1,
-  },
+  pos: Coordinate,
+  dir: Coordinate<-1 | 0 | 1>,
 }
 
 export type ClientSocket = ServerWebSocket<ClientData>;
@@ -23,6 +22,7 @@ export type GameData = {
   boardSize: number,
   players: StrIdxObj<ClientSocket>,
   interval: Timer,
+  foodLocations: Coordinate[]
 }
 
 // export type ClientGameData = {

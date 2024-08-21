@@ -1,7 +1,23 @@
 import t from '@/lib/getTag'
-import type { ClientGameData } from './types';
+import type { ClientGameData, StrIdxObj } from './types';
 
 let ws: WebSocket | undefined;
+
+document.addEventListener('keydown', e => {
+  console.log(e.key)
+  if (!ws || ws.readyState > 1) return
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+    ws?.send(e.key)
+  }
+
+  // const movements: StrIdxObj<Function> = {
+  //   'ArrowUp': () => ws?.send('up'),
+  //   'ArrowDown': () => ws?.send('down'),
+  //   'ArrowLeft': () => ws?.send('left'),
+  //   'ArrowRight': () => ws?.send('right'),
+  // }
+  // movements[e.key]?.();
+})
 
 document.body.append(
   t('button', {
@@ -26,7 +42,7 @@ document.body.append(
                 [ ...Array(msg.boardSize).keys() ].map(col => {
                   return t('div', {
                     id: `cell-${row}-${col}`,
-                    className: `aspect-square min-h-12`,
+                    className: `aspect-square min-h-12 flex justify-center items-center`,
                   })
                 })
               )
@@ -46,6 +62,12 @@ document.body.append(
           console.log(pos.row, pos.col, color);
           (document.querySelector(`#cell-${pos.row}-${pos.col}`) as HTMLDivElement).style.backgroundColor = `#${color}`
         })
+
+        // Color in where food is
+        msg.foodLocations.forEach(coor => {
+          (document.querySelector(`#cell-${coor.row}-${coor.col}`) as HTMLDivElement).textContent = '*'
+        })
+
       }
     }
   }),

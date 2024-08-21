@@ -1,8 +1,9 @@
 import type {
   ClientData,
+  Coordinate,
   GameData,
   StrIdxObj
-} from './types';
+} from '@/types';
 
 await Bun.build({
   entrypoints: [ 'src/client.ts' ],
@@ -13,13 +14,12 @@ await Bun.build({
 
 Bun.spawnSync('bunx tailwindcss -i src/globals.css -o public/style.css --minify'.split(' '))
 
-const allGames: StrIdxObj<GameData> = {}
-
 function getClientMsg(gameCode: string) {
   const newPlayers: StrIdxObj<ClientData> = {}
   Object.keys(allGames[gameCode].players).forEach(uuid => {
     newPlayers[uuid] = allGames[gameCode].players[uuid].data
   })
+
   return {
     ...allGames[gameCode],
     players: newPlayers,
@@ -30,14 +30,32 @@ function getClientMsg(gameCode: string) {
 function refreshGameState(gameCode: string) {
   return () => {
     const gameInfo = allGames[gameCode]
+
+    // Move each character once, and detect out of bounds
     Object.values(gameInfo.players).forEach(player => {
       if (player.data.state !== 'playing') return
 
       const newRow = player.data.pos.row += player.data.dir.row;
       const newCol = player.data.pos.col += player.data.dir.col;
-      if (0 > newRow || newRow > gameInfo.boardSize - 1) player.data.state = 'gameover'
-      if (0 > newCol || newCol > gameInfo.boardSize - 1) player.data.state = 'gameover'
+      // if (0 > newRow || newRow > gameInfo.boardSize - 1) player.data.state = 'gameover'
+      // if (0 > newCol || newCol > gameInfo.boardSize - 1) player.data.state = 'gameover'
+      
+      if (
+        0 > newRow || newRow > gameInfo.boardSize - 1 ||
+          0 > newCol || newCol > gameInfo.boardSize - 1
+      ) {
+        player.data.state = 'gameover';
+        gameInfo.foodLocations.shift()
+      }
     });
+
+    const activePlayerCount = Object.values(gameInfo.players).filter(player => player.data.state !== 'gameover').length 
+    const newFoodCount = activePlayerCount - gameInfo.foodLocations.length;
+    if (newFoodCount > 0) {
+      [ ...Array(newFoodCount).keys() ].forEach(() => {
+        gameInfo.foodLocations.push(getRandomCoor(gameInfo.boardSize))
+      })
+    }
 
     const gameState = getClientMsg(gameCode);
     Object.values(allGames[gameCode].players)
@@ -46,6 +64,32 @@ function refreshGameState(gameCode: string) {
         uuid: player.data.uuid
       })));
   }
+}
+
+function getRandomCoor(size: number) {
+  return {
+    row: Math.floor(Math.random() * size),
+    col: Math.floor(Math.random() * size),
+  }
+}
+
+function getRandomDir() {
+  const options = [
+    'ArrowUp',
+    'ArrowDown',
+    'ArrowLeft',
+    'ArrowRight',
+  ]
+  return movements[options[Math.floor(Math.random() * options.length)]]
+}
+
+const allGames: StrIdxObj<GameData> = {}
+
+const movements: StrIdxObj<Coordinate<1 | 0 | -1>> = {
+  'ArrowUp':    { row: -1, col: 0 },
+  'ArrowDown':  { row: 1, col: 0 },
+  'ArrowLeft':  { row: 0, col: -1 },
+  'ArrowRight': { row: 0, col: 1 },
 }
 
 Bun.serve<ClientData>({
@@ -67,7 +111,8 @@ Bun.serve<ClientData>({
   },
   websocket: {
     message: (ws, msg) => {
-      console.log(msg)
+      console.log('this is a new msg from', ws.data.uuid, msg)
+      ws.data.dir = movements[msg.toString()]
     },
     open: (ws) => {
       const game = allGames[ws.data.gameCode];
@@ -75,28 +120,35 @@ Bun.serve<ClientData>({
       if (game) {
         while (game.players[uuid]) uuid = crypto.randomUUID()
         game.players[uuid] = ws
+        game.foodLocations.push(getRandomCoor(game.boardSize))
       } else {
+        const defaultBoardSize = 10
         allGames[ws.data.gameCode] = {
-          boardSize: 10,
+          boardSize: defaultBoardSize,
           players: {
             [uuid]: ws
           },
           interval: setInterval(refreshGameState(ws.data.gameCode), 1000),
+          foodLocations: [ getRandomCoor(defaultBoardSize) ],
         }
       }
       ws.data.uuid = uuid;
       ws.data.length = 1;
-      ws.data.pos = {
-        row: Math.floor(Math.random() * allGames[ws.data.gameCode].boardSize),
-        col: Math.floor(Math.random() * allGames[ws.data.gameCode].boardSize),
-      };
+      ws.data.pos = getRandomCoor(allGames[ws.data.gameCode].boardSize)
+      // ws.data.pos = {
+      //   row: Math.floor(Math.random() * allGames[ws.data.gameCode].boardSize),
+      //   col: Math.floor(Math.random() * allGames[ws.data.gameCode].boardSize),
+      // };
       ws.data.state = 'playing'
-      ws.data.dir = { row: 0, col: 1 };
+      // ws.data.dir = { row: 0, col: 1 };
+      ws.data.dir = getRandomDir();
+      // ws.data.dir = { row: 0, col: 0 };
       ws.send(JSON.stringify({ ...getClientMsg(ws.data.gameCode), uuid }));
       console.log('OPENED', allGames)
     },
     close: (ws, code, reason) => {
       delete allGames[ws.data.gameCode].players[ws.data.uuid];
+      allGames[ws.data.gameCode].foodLocations.shift();
       console.log('CLOSED', allGames)
     }
   }
