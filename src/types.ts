@@ -5,14 +5,19 @@ export type Coordinate<T = number> = {
   col: T,
 }
 
+export type Corner = Coordinate & { dir: any }
+
 export type ClientData = {
   gameCode: string,
   uuid: string,
-  length: number,
+  // length: number,
   color: string,
-  corners: Coordinate[],
+  // corners: Corner[],
   state: 'playing' | 'gameover',
-  pos: Coordinate,
+  pos: Coordinate[]
+  // pos: Coordinate,
+  // head: Coordinate,
+  // tail: Coordinate,
   dir: Coordinate<-1 | 0 | 1>,
 }
 

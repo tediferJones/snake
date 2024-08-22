@@ -9,14 +9,6 @@ document.addEventListener('keydown', e => {
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
     ws?.send(e.key)
   }
-
-  // const movements: StrIdxObj<Function> = {
-  //   'ArrowUp': () => ws?.send('up'),
-  //   'ArrowDown': () => ws?.send('down'),
-  //   'ArrowLeft': () => ws?.send('left'),
-  //   'ArrowRight': () => ws?.send('right'),
-  // }
-  // movements[e.key]?.();
 })
 
 document.body.append(
@@ -36,13 +28,13 @@ document.body.append(
         document.querySelector('#gameOver')!.textContent = '';
         document.querySelector('#board')?.remove();
         document.body.appendChild(
-          t('div', { id: 'board', className: 'mx-auto w-min border-4 border-black flex flex-col bg-cyan-500' },
+          t('div', { id: 'board', className: 'mx-auto w-min border-4 border-black flex flex-col bg-gray-200' },
             [ ...Array(msg.boardSize).keys() ].map(row => {
               return t('div', { className: 'flex' },
                 [ ...Array(msg.boardSize).keys() ].map(col => {
                   return t('div', {
                     id: `cell-${row}-${col}`,
-                    className: `aspect-square min-h-12 flex justify-center items-center`,
+                    className: `aspect-square min-h-12 flex justify-center items-center border-2 border-gray-300`,
                   })
                 })
               )
@@ -58,9 +50,10 @@ document.body.append(
             }
             return
           }
-          const { pos, color } = player
-          console.log(pos.row, pos.col, color);
-          (document.querySelector(`#cell-${pos.row}-${pos.col}`) as HTMLDivElement).style.backgroundColor = `#${color}`
+          const { pos, color } = player;
+          pos.forEach(pos => {
+            (document.querySelector(`#cell-${pos.row}-${pos.col}`) as HTMLDivElement).style.backgroundColor = `#${color}`;
+          })
         })
 
         // Color in where food is

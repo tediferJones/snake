@@ -35,17 +35,45 @@ function refreshGameState(gameCode: string) {
     Object.values(gameInfo.players).forEach(player => {
       if (player.data.state !== 'playing') return
 
-      const newRow = player.data.pos.row += player.data.dir.row;
-      const newCol = player.data.pos.col += player.data.dir.col;
-      // if (0 > newRow || newRow > gameInfo.boardSize - 1) player.data.state = 'gameover'
-      // if (0 > newCol || newCol > gameInfo.boardSize - 1) player.data.state = 'gameover'
-      
+      // const newRow = player.data.pos.row += player.data.dir.row;
+      // const newCol = player.data.pos.col += player.data.dir.col;
+
+      // player.data.pos.forEach(pos => {
+      //   pos.row += player.data.dir.row
+      //   pos.col += player.data.dir.col
+      // })
+
+      const { pos, dir } = player.data;
+      const newRow = pos[0].row + dir.row;
+      const newCol = pos[0].col + dir.col;
+
       if (
+        // Check if player is out of bounds
         0 > newRow || newRow > gameInfo.boardSize - 1 ||
-          0 > newCol || newCol > gameInfo.boardSize - 1
+          0 > newCol || newCol > gameInfo.boardSize - 1 ||
+          // Check if newPos intersects with any player's existing pos
+          Object.values(gameInfo.players).some(player => {
+            return player.data.pos.some(pos => {
+              return pos.row === newRow && pos.col === newCol
+            })
+          })
       ) {
         player.data.state = 'gameover';
         gameInfo.foodLocations.shift()
+        return
+      }
+
+      player.data.pos.unshift({
+        row: newRow,
+        col: newCol,
+      });
+      
+      const foundFood = gameInfo.foodLocations.findIndex(coor => coor.row === newRow && coor.col === newCol);
+      if (foundFood !== -1) {
+        // player.data.length += 1;
+        gameInfo.foodLocations.splice(foundFood, 1)
+      } else {
+        player.data.pos.pop();
       }
     });
 
@@ -133,14 +161,9 @@ Bun.serve<ClientData>({
         }
       }
       ws.data.uuid = uuid;
-      ws.data.length = 1;
-      ws.data.pos = getRandomCoor(allGames[ws.data.gameCode].boardSize)
-      // ws.data.pos = {
-      //   row: Math.floor(Math.random() * allGames[ws.data.gameCode].boardSize),
-      //   col: Math.floor(Math.random() * allGames[ws.data.gameCode].boardSize),
-      // };
-      ws.data.state = 'playing'
-      // ws.data.dir = { row: 0, col: 1 };
+      // ws.data.length = 1;
+      ws.data.state = 'playing';
+      ws.data.pos = [ getRandomCoor(allGames[ws.data.gameCode].boardSize) ];
       ws.data.dir = getRandomDir();
       // ws.data.dir = { row: 0, col: 0 };
       ws.send(JSON.stringify({ ...getClientMsg(ws.data.gameCode), uuid }));
