@@ -1,6 +1,7 @@
 import type {
   ClientData,
   Coordinate,
+  Directions,
   GameData,
   StrIdxObj
 } from '@/types';
@@ -44,19 +45,25 @@ function refreshGameState(gameCode: string) {
       // })
 
       const { pos, dir } = player.data;
-      const newRow = pos[0].row + dir.row;
-      const newCol = pos[0].col + dir.col;
+      // const newRow = pos[0].row + dir.row;
+      // const newCol = pos[0].col + dir.col;
+      const newRow = pos[0].row + movements[dir].row;
+      const newCol = pos[0].col + movements[dir].col;
+      const usedPositions = Object.values(gameInfo.players).map(player => {
+        return player.data.pos
+      }).flat()
 
       if (
         // Check if player is out of bounds
         0 > newRow || newRow > gameInfo.boardSize - 1 ||
           0 > newCol || newCol > gameInfo.boardSize - 1 ||
           // Check if newPos intersects with any player's existing pos
-          Object.values(gameInfo.players).some(player => {
-            return player.data.pos.some(pos => {
-              return pos.row === newRow && pos.col === newCol
-            })
-          })
+          // Object.values(gameInfo.players).some(player => {
+          //   return player.data.pos.some(pos => {
+          //     return pos.row === newRow && pos.col === newCol
+          //   })
+          // })
+          usedPositions.find(pos => pos.row === newRow && pos.col === newCol)
       ) {
         player.data.state = 'gameover';
         gameInfo.foodLocations.shift()
@@ -77,11 +84,36 @@ function refreshGameState(gameCode: string) {
       }
     });
 
+    // Check active player count and current food count, and add more food if needed
+    // MAKE SURE FOOD DOES NOT SPAWN INSIDE AN OCCUPIED COORDINATE
     const activePlayerCount = Object.values(gameInfo.players).filter(player => player.data.state !== 'gameover').length 
     const newFoodCount = activePlayerCount - gameInfo.foodLocations.length;
+    const usedPositions = Object.values(gameInfo.players).map(player => {
+      return player.data.pos
+    }).flat()
     if (newFoodCount > 0) {
       [ ...Array(newFoodCount).keys() ].forEach(() => {
-        gameInfo.foodLocations.push(getRandomCoor(gameInfo.boardSize))
+        // gameInfo.foodLocations.push(getRandomCoor(gameInfo.boardSize))
+
+        // THERE IS A PROBLEM HERE
+        // If you try to 'beat the game', you will never be able to pick up the last piece of food
+        // I.e. the snake cannot take over the entire board, when in reality this is possible and it should just end the game
+        // Instead of choosing a random position, create an array of every UNUSED position, if that number is zero, end the game
+        let newFoodPos = getRandomCoor(gameInfo.boardSize)
+        let attemptCount = 1
+
+        while (usedPositions.find(usedPos => usedPos.row === newFoodPos.row && usedPos.col === newFoodPos.col)) {
+          attemptCount++
+          if (attemptCount > 1000) break
+          newFoodPos = getRandomCoor(gameInfo.boardSize)
+        }
+
+        if (attemptCount > 1000) {
+          Object.values(gameInfo.players).forEach(player => player.data.state = 'winner')
+          return
+        }
+
+        gameInfo.foodLocations.push(newFoodPos)
       })
     }
 
@@ -102,18 +134,27 @@ function getRandomCoor(size: number) {
 }
 
 function getRandomDir() {
-  const options = [
+  const dirs: Directions[] = [
     'ArrowUp',
     'ArrowDown',
     'ArrowLeft',
     'ArrowRight',
   ]
-  return movements[options[Math.floor(Math.random() * options.length)]]
+  return dirs[Math.floor(Math.random() * dirs.length)]
+
+  // const options = [
+  //   'ArrowUp',
+  //   'ArrowDown',
+  //   'ArrowLeft',
+  //   'ArrowRight',
+  // ]
+  // return movements[options[Math.floor(Math.random() * options.length)]]
 }
 
 const allGames: StrIdxObj<GameData> = {}
 
-const movements: StrIdxObj<Coordinate<1 | 0 | -1>> = {
+// const movements: StrIdxObj<Coordinate<1 | 0 | -1>> = {
+const movements: { [key in Directions]: Coordinate<1 | 0 | -1> } = {
   'ArrowUp':    { row: -1, col: 0 },
   'ArrowDown':  { row: 1, col: 0 },
   'ArrowLeft':  { row: 0, col: -1 },
@@ -140,7 +181,8 @@ Bun.serve<ClientData>({
   websocket: {
     message: (ws, msg) => {
       console.log('this is a new msg from', ws.data.uuid, msg)
-      ws.data.dir = movements[msg.toString()]
+      // ws.data.dir = movements[msg.toString()]
+      ws.data.dir = (msg.toString() as Directions);
     },
     open: (ws) => {
       const game = allGames[ws.data.gameCode];
@@ -150,7 +192,8 @@ Bun.serve<ClientData>({
         game.players[uuid] = ws
         game.foodLocations.push(getRandomCoor(game.boardSize))
       } else {
-        const defaultBoardSize = 10
+        // const defaultBoardSize = 10
+        const defaultBoardSize = 4
         allGames[ws.data.gameCode] = {
           boardSize: defaultBoardSize,
           players: {

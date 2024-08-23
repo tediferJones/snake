@@ -5,7 +5,9 @@ export type Coordinate<T = number> = {
   col: T,
 }
 
-export type Corner = Coordinate & { dir: any }
+export type Directions = 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight';
+
+// export type Corner = Coordinate & { dir: any }
 
 export type ClientData = {
   gameCode: string,
@@ -13,12 +15,13 @@ export type ClientData = {
   // length: number,
   color: string,
   // corners: Corner[],
-  state: 'playing' | 'gameover',
+  state: 'playing' | 'gameover' | 'winner',
   pos: Coordinate[]
   // pos: Coordinate,
   // head: Coordinate,
   // tail: Coordinate,
-  dir: Coordinate<-1 | 0 | 1>,
+  // dir: Coordinate<-1 | 0 | 1>,
+  dir: Directions,
 }
 
 export type ClientSocket = ServerWebSocket<ClientData>;
