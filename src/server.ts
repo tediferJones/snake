@@ -127,9 +127,9 @@ function getRandomDir() {
   return dirs[Math.floor(Math.random() * dirs.length)];
 }
 
-const allGames: StrIdxObj<GameData> = {}
-const defaultTickRate = 500
-const defaultBoardSize = 4
+const allGames: StrIdxObj<GameData> = {};
+const defaultTickRate = 500;
+const defaultBoardSize = 10;
 
 const movements: { [key in Directions]: Coordinate<1 | 0 | -1> } = {
   'ArrowUp':    { row: -1, col: 0 },
@@ -178,11 +178,15 @@ Bun.serve<ClientData>({
             [uuid]: ws
           },
           interval: setInterval(refreshGameState(ws.data.gameCode), defaultTickRate),
+          // YOU CAN JUST CHOOSE A RANDOM POSITION
+          // YOU MUST CHOOSE A RANDOM POSITION THAT IS AVAILABLE
           foodLocations: [ getRandomCoor(defaultBoardSize) ],
         }
       }
       ws.data.uuid = uuid;
       ws.data.state = 'playing';
+      // YOU CAN JUST CHOOSE A RANDOM POSITION
+      // YOU MUST CHOOSE A RANDOM POSITION THAT IS AVAILABLE
       ws.data.pos = [ getRandomCoor(allGames[ws.data.gameCode].boardSize) ];
       ws.data.dir = getRandomDir();
       ws.send(JSON.stringify({ ...getClientMsg(ws.data.gameCode), uuid }));
