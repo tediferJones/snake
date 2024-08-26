@@ -8,7 +8,7 @@ export default function board({ boardSize }: { boardSize: ClientGameData['boardS
         [ ...Array(boardSize).keys() ].map(col => {
           return t('div', {
             id: `cell-${row}-${col}`,
-            className: `aspect-square flex-1 flex justify-center items-center border-2 border-gray-300`,
+            className: `aspect-square flex-1 flex justify-center items-center border-[1px] border-gray-300`,
           })
         })
       )

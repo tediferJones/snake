@@ -31,17 +31,29 @@ function getClientMsg(gameCode: string) {
   }
 }
 
-function getOpenPositions(gameCode: string) {
+function getOpenPositions(gameCode: string, count: number) {
   const gameInfo = allGames[gameCode];
-  if (!gameInfo) return
+  if (!gameInfo) return []
 
-  const usedPositions = Object.values(gameInfo.players).flatMap(player => player.data.pos).concat(gameInfo.foodLocations)
-  return [...Array(gameInfo.boardSize).keys()].flatMap(row => 
+  const usedPositions = Object.values(gameInfo.players)
+  .flatMap(player => player.data.pos ? player.data.pos : [])
+  .concat(gameInfo.foodLocations ? gameInfo.foodLocations : []);
+
+  // Get all open positions by generating every possible position, and remove those that exist in usedPositions
+  const openPositions = [...Array(gameInfo.boardSize).keys()].flatMap(row => 
     [...Array(gameInfo.boardSize).keys()].map(col => ({ row, col }))
-  ).filter(available => !usedPositions.some(used => 
-      available.row === used.row && available.col === used.col
-    )
-  )
+  ).filter(available => !usedPositions.some(used =>
+    available.row === used.row && available.col === used.col
+  ));
+
+  // Randomly select a certain number of positons from openPositions array
+  // and make sure the same position doesnt get selected twice
+  return [...Array(count).keys()].map(() => {
+    const randomIndex = Math.floor(Math.random() * openPositions.length)
+    const randomPosition = openPositions[randomIndex]
+    openPositions.splice(randomIndex, 1)
+    return randomPosition
+  }).filter(coor => coor);
 }
 
 function refreshGameState(gameCode: string) {
@@ -57,8 +69,7 @@ function refreshGameState(gameCode: string) {
       const newRow = pos[0].row + movements[dir].row;
       const newCol = pos[0].col + movements[dir].col;
       const usedPositions = Object.values(gameInfo.players)
-        .map(player => player.data.pos)
-        .flat()
+        .flatMap(player => player.data.state === 'playing' ? player.data.pos : [])
 
       if (
         // Check if player is out of bounds
@@ -91,19 +102,13 @@ function refreshGameState(gameCode: string) {
     const newFoodCount = activePlayerCount - gameInfo.foodLocations.length;
 
     if (newFoodCount > 0) {
-      const availablePositions = getOpenPositions(gameCode);
+      const availablePositions = getOpenPositions(gameCode, newFoodCount);
       // If there are no available positions, game is over and all players remaining are winners
-      if (!availablePositions || availablePositions.length === 0) {
+      if (availablePositions.length === 0) {
         return Object.values(gameInfo.players)
           .forEach(player => player.data.state = 'winner')
       }
-
-      // Randomly select new locations for food to spawn
-      [ ...Array(newFoodCount).keys() ].forEach(() => {
-        const randomIndex = Math.floor(Math.random() * availablePositions.length);
-        gameInfo.foodLocations.push(availablePositions[randomIndex])
-        availablePositions.splice(randomIndex, 1)
-      })
+      gameInfo.foodLocations = gameInfo.foodLocations.concat(availablePositions)
     }
 
     const gameState = getClientMsg(gameCode);
@@ -112,13 +117,6 @@ function refreshGameState(gameCode: string) {
         ...gameState,
         uuid: player.data.uuid
       })));
-  }
-}
-
-function getRandomCoor(size: number) {
-  return {
-    row: Math.floor(Math.random() * size),
-    col: Math.floor(Math.random() * size),
   }
 }
 
@@ -169,7 +167,8 @@ Bun.serve<ClientData>({
       if (game) {
         while (game.players[uuid]) uuid = crypto.randomUUID()
         game.players[uuid] = ws
-        game.foodLocations.push(getRandomCoor(game.boardSize))
+        // game.foodLocations.push(getRandomCoor(game.boardSize))
+        game.foodLocations = game.foodLocations.concat(getOpenPositions(ws.data.gameCode, 1))
         game.boardSize = Math.floor(Math.sqrt((game.boardSize ** 2) + 100))
       } else {
         allGames[ws.data.gameCode] = {
@@ -178,16 +177,12 @@ Bun.serve<ClientData>({
             [uuid]: ws
           },
           interval: setInterval(refreshGameState(ws.data.gameCode), defaultTickRate),
-          // YOU CAN JUST CHOOSE A RANDOM POSITION
-          // YOU MUST CHOOSE A RANDOM POSITION THAT IS AVAILABLE
-          foodLocations: [ getRandomCoor(defaultBoardSize) ],
+          foodLocations: getOpenPositions(ws.data.gameCode, 1)
         }
       }
       ws.data.uuid = uuid;
       ws.data.state = 'playing';
-      // YOU CAN JUST CHOOSE A RANDOM POSITION
-      // YOU MUST CHOOSE A RANDOM POSITION THAT IS AVAILABLE
-      ws.data.pos = [ getRandomCoor(allGames[ws.data.gameCode].boardSize) ];
+      ws.data.pos = getOpenPositions(ws.data.gameCode, 1)
       ws.data.dir = getRandomDir();
       ws.send(JSON.stringify({ ...getClientMsg(ws.data.gameCode), uuid }));
       console.log('OPENED', allGames)
