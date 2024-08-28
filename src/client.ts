@@ -9,6 +9,28 @@ import type {
 let ws: WebSocket | undefined;
 let lastMsg: ClientGameData | undefined;
 
+const renderDirection = {
+  ArrowUp: '-rotate-90',
+  ArrowRight: 'rotate-0',
+  ArrowDown: 'rotate-90',
+  ArrowLeft: 'rotate-180',
+}
+
+// function invertHexColor(hex: string) {
+//   // Convert the hex color to RGB components
+//   const r = parseInt(hex.substring(0, 2), 16);
+//   const g = parseInt(hex.substring(2, 4), 16);
+//   const b = parseInt(hex.substring(4, 6), 16);
+// 
+//   // Invert each component
+//   const newR = (255 - r).toString(16).padStart(2, '0');
+//   const newG = (255 - g).toString(16).padStart(2, '0');
+//   const newB = (255 - b).toString(16).padStart(2, '0');
+// 
+//   // Return the inverted color as a hex string
+//   return `${newR}${newG}${newB}`;
+// }
+
 function changeDirection(dir: Directions) {
   if (!ws || ws.readyState > 1) return
   console.log('sending websocket msg')
@@ -78,18 +100,65 @@ document.body.append(
             }
 
             const { pos, color } = player;
-            pos.forEach(pos => {
-              (document.querySelector(`#cell-${pos.row}-${pos.col}`) as HTMLDivElement).style.backgroundColor = `#${color}`;
+            pos.forEach(({ row, col }, i) => {
+              const cell = (document.querySelector(`#cell-${row}-${col}`) as HTMLDivElement)
+              cell.style.backgroundColor = `#${color}`;
+              if (i === 0) { 
+                // console.log('Inverted color', invertHexColor(player.color), player.color)
+                // cell.textContent = ':)'
+                cell.classList.add('rounded-r-3xl', 'text-xl', renderDirection[player.dir]/*, `text-[#${invertHexColor(player.color)}]`*/)
+              }
+
+              const before = pos[i - 1];
+              const after = pos[i + 1]
+              if (before && after) {
+                // const rowDiff = before.row - after.row;
+                // const colDiff = before.col - after.col;
+                const playerColor = `#${color}`;
+                if (before.row - after.row === 0) {
+                  cell.style.borderRightColor = `#${color}`
+                  cell.style.borderLeftColor = `#${color}`
+                } else if (before.col - after.col === 0) {
+                  cell.style.borderTopColor = `#${color}`
+                  cell.style.borderBottomColor = `#${color}`
+                } else if (before.row - after.row === 1) {
+                  if (before.col - after.col === 1) {
+                    cell.style.borderRightColor = playerColor
+                    cell.style.borderTopColor = playerColor
+                  } else {
+                    cell.style.borderLeftColor = playerColor
+                    cell.style.borderTopColor = playerColor
+                  }
+                } else if (before.row - after.row === -1) {
+                  if (before.col - after.col === 1) {
+                    cell.style.borderRightColor = playerColor
+                    cell.style.borderBottomColor = playerColor
+                  } else {
+                    cell.style.borderLeftColor = playerColor
+                    cell.style.borderBottomColor = playerColor
+                  }
+                }
+                // else if (before.col - after.col === 1) {
+                //   if (before.row - after.row === 1) {
+                //     cell.style.backgroundColor = '#000000'
+                //     cell.style.borderLeftColor = playerColor
+                //     cell.style.borderBottomColor = playerColor
+                //   } else {
+                //     cell.style.borderLeftColor = playerColor
+                //     cell.style.borderTopColor = playerColor
+                //   }
+                // }
+              }
             })
           })
 
           // Color in where food is
+          console.log('rendering food', msg.foodLocations)
           msg.foodLocations.forEach(coor => {
             document.querySelector(`#cell-${coor.row}-${coor.col}`)?.append(
               t('div', { className: 'h-1/2 w-1/2 bg-black rotate-45'})
             )
           })
-
         }
       }
     }),

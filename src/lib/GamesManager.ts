@@ -40,8 +40,9 @@ export default class GamesManager {
           [uuid]: ws
         },
         interval: setInterval(this.refreshGameState(ws.data.gameCode), this.defaultTickRate),
-        foodLocations: this.getOpenPositions(ws.data.gameCode, 1)
+        foodLocations: []
       }
+      this.allGames[ws.data.gameCode].foodLocations = this.getOpenPositions(ws.data.gameCode, 1);
     }
     ws.data.uuid = uuid;
     ws.data.state = 'playing';
@@ -80,8 +81,8 @@ export default class GamesManager {
     if (!gameInfo) return []
 
     const usedPositions = Object.values(gameInfo.players)
-    .flatMap(player => player.data.pos ? player.data.pos : [])
-    .concat(gameInfo.foodLocations ? gameInfo.foodLocations : []);
+    .flatMap(player => player.data.pos || [])
+    .concat(gameInfo.foodLocations || []);
 
     // Get all open positions by generating every possible position, and remove those that exist in usedPositions
     const openPositions = [...Array(gameInfo.boardSize).keys()].flatMap(row => 
