@@ -16,6 +16,13 @@ const renderDirection = {
   ArrowLeft: 'rotate-180',
 }
 
+const roundingDir = {
+  ArrowUp: 'rounded-t-3xl',
+  ArrowRight: 'rounded-r-3xl',
+  ArrowDown: 'rounded-b-3xl',
+  ArrowLeft: 'rounded-l-3xl',
+}
+
 // function invertHexColor(hex: string) {
 //   // Convert the hex color to RGB components
 //   const r = parseInt(hex.substring(0, 2), 16);
@@ -63,9 +70,9 @@ document.body.append(
       textContent: 'Join General Lobby',
       className: 'p-4 border-4 border-black',
       onclick: (e) => {
-        const { host, protocol } = window.location
-        const color = (document.querySelector('#colorPicker') as HTMLInputElement).value.slice(1)
-        console.log(color)
+        const { host, protocol } = window.location;
+        const color = (document.querySelector('#colorPicker') as HTMLInputElement).value.slice(1);
+        console.log(color);
         if (ws) {
           ws.close();
           ws = undefined;
@@ -90,64 +97,64 @@ document.body.append(
           }
           boardElement.appendChild(board({ boardSize: msg.boardSize }));
 
+          // Update player status
+          document.querySelector('#gameOver')!.textContent = msg.players[msg.uuid].state
+
           // Color in where the players are
-          Object.values(msg.players).forEach(player => {
-            if (player.state !== 'playing') {
-              if (player.uuid === msg.uuid) {
-                document.querySelector('#gameOver')!.textContent = player.state
-              }
-              return
-            }
+          Object.values(msg.players).filter(player => player.state !== 'gameover').forEach(player => {
+            // if (player.state !== 'playing') {
+            //   if (player.uuid === msg.uuid) {
+            //     document.querySelector('#gameOver')!.textContent = player.state
+            //   }
+            //   if (player.state === 'gameover') return
+            // }
 
             const { pos, color } = player;
+            const playerColor = `#${color}`;
             pos.forEach(({ row, col }, i) => {
               const cell = (document.querySelector(`#cell-${row}-${col}`) as HTMLDivElement)
-              cell.style.backgroundColor = `#${color}`;
+              cell.style.backgroundColor = playerColor;
               if (i === 0) { 
                 // console.log('Inverted color', invertHexColor(player.color), player.color)
                 // cell.textContent = ':)'
-                cell.classList.add('rounded-r-3xl', 'text-xl', renderDirection[player.dir]/*, `text-[#${invertHexColor(player.color)}]`*/)
+                // cell.classList.add('rounded-r-3xl', 'text-xl', renderDirection[player.dir]/*, `text-[#${invertHexColor(player.color)}]`*/)
+                cell.classList.add(roundingDir[player.dir])
+                cell.appendChild(
+                  t('div', { className: `h-full w-full flex flex-col justify-center items-center ${renderDirection[player.dir]}` }, [
+                    t('div', { className: 'h-1/5 w-1/5 bg-black rounded-full' }),
+                    t('div', { className: 'h-1/5 w-1/5' }),
+                    t('div', { className: 'h-1/5 w-1/5 bg-black rounded-full' })
+                  ])
+                )
               }
 
+              // Add outline to player
               const before = pos[i - 1];
               const after = pos[i + 1]
+              if (before) {
+                if (before.row < row) cell.style.borderTopColor = playerColor;
+                if (before.row > row) cell.style.borderBottomColor = playerColor;
+                if (before.col < col) cell.style.borderLeftColor = playerColor;
+                if (before.col > col) cell.style.borderRightColor = playerColor;
+              }
+
+              if (after) {
+                if (row < after.row) cell.style.borderBottomColor = playerColor;
+                if (row > after.row) cell.style.borderTopColor = playerColor;
+                if (col < after.col) cell.style.borderRightColor = playerColor;
+                if (col > after.col) cell.style.borderLeftColor = playerColor;
+              }
+
               if (before && after) {
-                // const rowDiff = before.row - after.row;
-                // const colDiff = before.col - after.col;
-                const playerColor = `#${color}`;
-                if (before.row - after.row === 0) {
-                  cell.style.borderRightColor = `#${color}`
-                  cell.style.borderLeftColor = `#${color}`
-                } else if (before.col - after.col === 0) {
-                  cell.style.borderTopColor = `#${color}`
-                  cell.style.borderBottomColor = `#${color}`
-                } else if (before.row - after.row === 1) {
-                  if (before.col - after.col === 1) {
-                    cell.style.borderRightColor = playerColor
-                    cell.style.borderTopColor = playerColor
-                  } else {
-                    cell.style.borderLeftColor = playerColor
-                    cell.style.borderTopColor = playerColor
-                  }
-                } else if (before.row - after.row === -1) {
-                  if (before.col - after.col === 1) {
-                    cell.style.borderRightColor = playerColor
-                    cell.style.borderBottomColor = playerColor
-                  } else {
-                    cell.style.borderLeftColor = playerColor
-                    cell.style.borderBottomColor = playerColor
-                  }
-                }
-                // else if (before.col - after.col === 1) {
-                //   if (before.row - after.row === 1) {
-                //     cell.style.backgroundColor = '#000000'
-                //     cell.style.borderLeftColor = playerColor
-                //     cell.style.borderBottomColor = playerColor
-                //   } else {
-                //     cell.style.borderLeftColor = playerColor
-                //     cell.style.borderTopColor = playerColor
-                //   }
-                // }
+                if (before.row < row && after.col < col) cell.classList.add('rounded-br-3xl')
+                if (before.row < row && after.col > col) cell.classList.add('rounded-bl-3xl')
+                if (before.row > row && after.col < col) cell.classList.add('rounded-tr-3xl')
+                if (before.row > row && after.col > col) cell.classList.add('rounded-tl-3xl')
+
+                if (row < after.row && col < before.col) cell.classList.add('rounded-tl-3xl')
+                if (row < after.row && col > before.col) cell.classList.add('rounded-tr-3xl')
+                if (row > after.row && col < before.col) cell.classList.add('rounded-bl-3xl')
+                if (row > after.row && col > before.col) cell.classList.add('rounded-br-3xl')
               }
             })
           })

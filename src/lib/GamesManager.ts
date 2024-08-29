@@ -10,8 +10,8 @@ import type { ServerWebSocket } from 'bun';
 export default class GamesManager {
   allGames: StrIdxObj<GameData>
   movements: { [key in Directions]: Coordinate<1 | 0 | -1> }
-  defaultTickRate: 500;
-  defaultBoardSize: 10;
+  defaultTickRate: number;
+  defaultBoardSize: number;
 
   constructor() {
     this.allGames = {};
@@ -22,7 +22,7 @@ export default class GamesManager {
       'ArrowRight': { row: 0, col: 1 },
     }
     this.defaultTickRate = 500;
-    this.defaultBoardSize = 10;
+    this.defaultBoardSize = 6;
   }
 
   joinGame(ws: ServerWebSocket<ClientData>) {
