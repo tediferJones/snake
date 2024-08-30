@@ -49,7 +49,7 @@ export default class GamesManager {
     ws.data.pos = this.getOpenPositions(ws.data.gameCode, 1)
     ws.data.dir = this.getRandomDir();
     ws.send(JSON.stringify({ ...this.getClientMsg(ws.data.gameCode), uuid }));
-    console.log('OPENED', this.allGames)
+    // console.log('OPENED', this.allGames)
   }
 
   leaveGame(ws: ServerWebSocket<ClientData>) {
@@ -60,11 +60,11 @@ export default class GamesManager {
       clearInterval(gameInfo.interval)
       delete this.allGames[ws.data.gameCode]
     }
-    console.log('CLOSED', this.allGames)
+    // console.log('CLOSED', this.allGames)
   }
 
   changeDir(ws: ServerWebSocket<ClientData>, msg: string | Buffer) {
-    console.log('this is a new msg from', ws.data.uuid, msg)
+    // console.log('this is a new msg from', ws.data.uuid, msg)
     const newDir = msg.toString();
     if (Object.keys(this.movements).includes(newDir)) {
       ws.data.dir = newDir as Directions;
