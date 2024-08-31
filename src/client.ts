@@ -41,6 +41,9 @@ function invertHexColor(hex: string) {
 function changeDirection(dir: Directions) {
   if (!ws || ws.readyState > 1) return
   console.log('sending websocket msg')
+  if (lastMsg?.players[lastMsg.uuid].state !== 'playing') {
+    return
+  }
 
   // If player is moving up and hits the up key, no point in sending that to server so it can be ignored
   // Likewise if player is moving left and hits the right key, that is an impossible move and should also be ignored

@@ -22,7 +22,8 @@ export type GameData = {
   boardSize: number,
   players: StrIdxObj<ClientSocket>,
   interval: Timer,
-  foodLocations: Coordinate[]
+  foodLocations: Coordinate[],
+  // gameState: 'lobby' | 'playing' | 'gameover'
 }
 
 export type ClientGameData = Omit<GameData, 'interval'> & {

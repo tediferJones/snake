@@ -32,7 +32,8 @@ export default class GamesManager {
       while (game.players[uuid]) uuid = crypto.randomUUID()
       game.players[uuid] = ws
       game.foodLocations = game.foodLocations.concat(this.getOpenPositions(ws.data.gameCode, 1))
-      game.boardSize = Math.floor(Math.sqrt((game.boardSize ** 2) + 100))
+      // game.boardSize = Math.floor(Math.sqrt((game.boardSize ** 2) + 100))
+      game.boardSize = Math.floor(Math.sqrt((this.defaultBoardSize ** 2) * Object.keys(game.players).length + 1))
     } else {
       this.allGames[ws.data.gameCode] = {
         boardSize: this.defaultBoardSize,
@@ -102,16 +103,24 @@ export default class GamesManager {
   }
 
   getClientMsg(gameCode: string) {
-    const newPlayers: StrIdxObj<ClientData> = {}
-    Object.keys(this.allGames[gameCode].players).forEach(uuid => {
-      newPlayers[uuid] = this.allGames[gameCode].players[uuid].data
-    })
-
     return {
       ...this.allGames[gameCode],
-      players: newPlayers,
+      players: Object.keys(this.allGames[gameCode].players).reduce((newPlayers, uuid) => {
+        newPlayers[uuid] = this.allGames[gameCode].players[uuid].data;
+        return newPlayers
+      }, {} as StrIdxObj<ClientData>),
       interval: undefined,
     }
+    // const newPlayers: StrIdxObj<ClientData> = {}
+    // Object.keys(this.allGames[gameCode].players).forEach(uuid => {
+    //   newPlayers[uuid] = this.allGames[gameCode].players[uuid].data
+    // })
+
+    // return {
+    //   ...this.allGames[gameCode],
+    //   players: newPlayers,
+    //   interval: undefined,
+    // }
   }
 
   refreshGameState(gameCode: string) {
@@ -169,12 +178,16 @@ export default class GamesManager {
         gameInfo.foodLocations = gameInfo.foodLocations.concat(availablePositions)
       }
 
-      const gameState = this.getClientMsg(gameCode);
+      const gameState: any = this.getClientMsg(gameCode);
       Object.values(this.allGames[gameCode].players)
-        .forEach(player => player.send(JSON.stringify({
-          ...gameState,
-          uuid: player.data.uuid
-        })));
+        // .forEach(player => player.send(JSON.stringify({
+        //   ...gameState,
+        //   uuid: player.data.uuid
+        // })));
+        .forEach(player => {
+          gameState.uuid = player.data.uuid
+          player.send(JSON.stringify(gameState))
+        });
     }
   }
 }
