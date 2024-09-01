@@ -1,17 +1,20 @@
+import type { ServerWebSocket } from 'bun';
 import type {
-    ClientData,
+  Actions,
+  ClientData,
+  ClientMsg,
   Coordinate,
   Directions,
   GameData,
   StrIdxObj
 } from '@/types';
-import type { ServerWebSocket } from 'bun';
 
 export default class GamesManager {
   allGames: StrIdxObj<GameData>
   movements: { [key in Directions]: Coordinate<1 | 0 | -1> }
   defaultTickRate: number;
   defaultBoardSize: number;
+  actions: { [key in Actions]: Function }
 
   constructor() {
     this.allGames = {};
@@ -21,6 +24,13 @@ export default class GamesManager {
       'ArrowLeft':  { row: 0, col: -1 },
       'ArrowRight': { row: 0, col: 1 },
     }
+    this.actions = {
+      changeDir: (ws: ServerWebSocket<ClientData>, dir: Directions) => {
+        if (Object.keys(this.movements).includes(dir)) {
+          ws.data.dir = dir as Directions;
+        }
+      }
+    }
     this.defaultTickRate = 500;
     this.defaultBoardSize = 6;
   }
@@ -29,25 +39,25 @@ export default class GamesManager {
     const game = this.allGames[ws.data.gameCode];
     let uuid = crypto.randomUUID();
     if (game) {
-      while (game.players[uuid]) uuid = crypto.randomUUID()
-      game.players[uuid] = ws
-      game.foodLocations = game.foodLocations.concat(this.getOpenPositions(ws.data.gameCode, 1))
+      while (game.players[uuid]) uuid = crypto.randomUUID();
+      game.players[uuid] = ws;
+      game.foodLocations = game.foodLocations.concat(this.getOpenPositions(ws.data.gameCode, 1));
       // game.boardSize = Math.floor(Math.sqrt((game.boardSize ** 2) + 100))
-      game.boardSize = Math.floor(Math.sqrt((this.defaultBoardSize ** 2) * Object.keys(game.players).length + 1))
+      game.boardSize = Math.floor(Math.sqrt((this.defaultBoardSize ** 2) * Object.keys(game.players).length + 1));
     } else {
       this.allGames[ws.data.gameCode] = {
         boardSize: this.defaultBoardSize,
-        players: {
-          [uuid]: ws
-        },
+        players: { [uuid]: ws },
         interval: setInterval(this.refreshGameState(ws.data.gameCode), this.defaultTickRate),
-        foodLocations: []
+        foodLocations: [],
+        gameState: 'running',
       }
+      // If at all possible, this attribute assignment should be moved into the object above
       this.allGames[ws.data.gameCode].foodLocations = this.getOpenPositions(ws.data.gameCode, 1);
     }
     ws.data.uuid = uuid;
     ws.data.state = 'playing';
-    ws.data.pos = this.getOpenPositions(ws.data.gameCode, 1)
+    ws.data.pos = this.getOpenPositions(ws.data.gameCode, 1);
     ws.data.dir = this.getRandomDir();
     ws.send(JSON.stringify({ ...this.getClientMsg(ws.data.gameCode), uuid }));
     // console.log('OPENED', this.allGames)
@@ -58,18 +68,22 @@ export default class GamesManager {
     delete gameInfo.players[ws.data.uuid];
     gameInfo.foodLocations.shift();
     if (Object.keys(gameInfo.players).length === 0) {
-      clearInterval(gameInfo.interval)
-      delete this.allGames[ws.data.gameCode]
+      clearInterval(gameInfo.interval);
+      delete this.allGames[ws.data.gameCode];
     }
     // console.log('CLOSED', this.allGames)
   }
 
-  changeDir(ws: ServerWebSocket<ClientData>, msg: string | Buffer) {
-    // console.log('this is a new msg from', ws.data.uuid, msg)
-    const newDir = msg.toString();
-    if (Object.keys(this.movements).includes(newDir)) {
-      ws.data.dir = newDir as Directions;
-    }
+  // changeDir(ws: ServerWebSocket<ClientData>, msg: string | Buffer) {
+  //   // console.log('this is a new msg from', ws.data.uuid, msg)
+  //   const newDir = msg.toString();
+  //   if (Object.keys(this.movements).includes(newDir)) {
+  //     ws.data.dir = newDir as Directions;
+  //   }
+  // }
+
+  clientMsg(ws: ServerWebSocket<ClientData>, msg: ClientMsg) {
+    this.actions[msg.action](ws, msg.dir);
   }
 
   getRandomDir() {
@@ -79,7 +93,7 @@ export default class GamesManager {
 
   getOpenPositions(gameCode: string, count: number) {
     const gameInfo = this.allGames[gameCode];
-    if (!gameInfo) return []
+    if (!gameInfo) return [];
 
     const usedPositions = Object.values(gameInfo.players)
     .flatMap(player => player.data.pos || [])
@@ -95,10 +109,10 @@ export default class GamesManager {
     // Randomly select a certain number of positons from openPositions array
     // and make sure the same position doesnt get selected twice
     return [...Array(count).keys()].map(() => {
-      const randomIndex = Math.floor(Math.random() * openPositions.length)
-      const randomPosition = openPositions[randomIndex]
-      openPositions.splice(randomIndex, 1)
-      return randomPosition
+      const randomIndex = Math.floor(Math.random() * openPositions.length);
+      const randomPosition = openPositions[randomIndex];
+      openPositions.splice(randomIndex, 1);
+      return randomPosition;
     }).filter(coor => coor);
   }
 
@@ -125,7 +139,7 @@ export default class GamesManager {
 
   refreshGameState(gameCode: string) {
     return () => {
-      const gameInfo = this.allGames[gameCode]
+      const gameInfo = this.allGames[gameCode];
       if (!gameInfo) return
 
       // Move each character once, and detect out of bounds
@@ -136,7 +150,7 @@ export default class GamesManager {
         const newRow = pos[0].row + this.movements[dir].row;
         const newCol = pos[0].col + this.movements[dir].col;
         const usedPositions = Object.values(gameInfo.players)
-        .flatMap(player => player.data.state === 'playing' ? player.data.pos : [])
+        .flatMap(player => player.data.state === 'playing' ? player.data.pos : []);
 
         if (
           // Check if player is out of bounds
@@ -157,7 +171,7 @@ export default class GamesManager {
         // This will result the in the players length growing (we add to the head and dont remove from the tail)
         const foundFood = gameInfo.foodLocations.findIndex(coor => coor.row === newRow && coor.col === newCol);
         if (foundFood !== -1) {
-          gameInfo.foodLocations.splice(foundFood, 1)
+          gameInfo.foodLocations.splice(foundFood, 1);
         } else {
           player.data.pos.pop();
         }
@@ -165,7 +179,7 @@ export default class GamesManager {
 
       // Check active player count and current food count, and add more food if needed
       // and make sure food does not spawn in a position that is alread occupied by a player or food
-      const activePlayerCount = Object.values(gameInfo.players).filter(player => player.data.state === 'playing').length 
+      const activePlayerCount = Object.values(gameInfo.players).filter(player => player.data.state === 'playing').length ;
       const newFoodCount = activePlayerCount - gameInfo.foodLocations.length;
 
       if (newFoodCount > 0) {
@@ -173,9 +187,9 @@ export default class GamesManager {
         // If there are no available positions, game is over and all players remaining are winners
         if (availablePositions.length === 0) {
           return Object.values(gameInfo.players)
-            .forEach(player => player.data.state = 'winner')
+            .forEach(player => player.data.state = 'winner');
         }
-        gameInfo.foodLocations = gameInfo.foodLocations.concat(availablePositions)
+        gameInfo.foodLocations = gameInfo.foodLocations.concat(availablePositions);
       }
 
       const gameState: any = this.getClientMsg(gameCode);
@@ -185,8 +199,8 @@ export default class GamesManager {
         //   uuid: player.data.uuid
         // })));
         .forEach(player => {
-          gameState.uuid = player.data.uuid
-          player.send(JSON.stringify(gameState))
+          gameState.uuid = player.data.uuid;
+          player.send(JSON.stringify(gameState));
         });
     }
   }

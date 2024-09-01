@@ -23,12 +23,24 @@ export type GameData = {
   players: StrIdxObj<ClientSocket>,
   interval: Timer,
   foodLocations: Coordinate[],
-  // gameState: 'lobby' | 'playing' | 'gameover'
+  gameState: 'lobby' | 'running'
 }
 
-export type ClientGameData = Omit<GameData, 'interval'> & {
+export type ClientGameData = Omit<GameData, 'interval' | 'players'> & {
   players: StrIdxObj<ClientData>,
   uuid: string,
 }
 
 export type StrIdxObj<T> = { [key: string]: T }
+
+export type Actions = 'changeDir'
+
+export type ClientMsg<T extends Actions = Actions> = {
+  action: Actions,
+} & MsgTypes[T]
+
+type MsgTypes = {
+  changeDir: {
+    dir: Directions
+  }
+}

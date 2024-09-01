@@ -31,7 +31,8 @@ Bun.serve<ClientData>({
     )
   },
   websocket: {
-    message: (ws, msg) => GamesMan.changeDir(ws, msg),
+    // message: (ws, msg) => GamesMan.changeDir(ws, msg),
+    message: (ws, msg) => GamesMan.clientMsg(ws, JSON.parse(msg.toString())),
     open: (ws) => GamesMan.joinGame(ws),
     close: (ws) => GamesMan.leaveGame(ws),
   }
