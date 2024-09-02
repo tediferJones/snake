@@ -1,7 +1,7 @@
 import t from '@/lib/getTag';
 import board from '@/components/board';
 import onScreenControls from '@/components/onScreenControls';
-import type { ClientGameData, Directions } from '@/types';
+import type { ClientGameData, ClientMsg, Directions } from '@/types';
 
 let ws: WebSocket | undefined;
 let lastMsg: ClientGameData | undefined;
@@ -88,7 +88,33 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
       )
     })
   },
-  lobby: () => {},
+  lobby: (msg) => {
+    console.log('rendering lobby', msg, msg.players[msg.uuid])
+    const boardElement = document.querySelector('#board');
+    if (!boardElement) throw Error('Cant find board element')
+    while (boardElement.firstChild) {
+      boardElement.removeChild(boardElement.firstChild)
+    }
+    // boardElement.appendChild(board({ boardSize: msg.boardSize }));
+    const isReady = msg.players[msg.uuid].state === 'ready';
+    boardElement.appendChild(
+      t('div', { className: 'flex flex-col gap-8 items-center'}, [
+        t('div', { textContent: 'this is the lobby' }),
+        t('div', { textContent: `Players ready: ${Object.values(msg.players).filter(player => player.state === 'ready').length} / ${Object.keys(msg.players).length}` }),
+        t('div', { className: `p-4 flex justify-center items-center gap-4 bg-gray-200 rounded-xl border-2 border-black` }, [
+          t('div', { textContent: 'Are you ready?' }),
+          t('button', {
+            textContent: '🖒',
+            className: `p-2 text-6xl transition-all duration-1000 border-2 rounded-xl ${isReady ? 'bg-green-300 text-green-500 border-green-500' : 'rotate-180 bg-red-300 text-red-500 border-red-500' }`,
+            onclick: () => {
+              console.log('send ready toggle msg to server')
+              ws?.send(JSON.stringify({ action: 'toggleReady' } satisfies ClientMsg<'toggleReady'>))
+            }
+          })
+        ])
+      ])
+    )
+  },
 }
 
 function invertHexColor(hex: string) {

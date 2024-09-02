@@ -11,7 +11,7 @@ export type ClientData = {
   gameCode: string,
   uuid: string,
   color: string,
-  state: 'playing' | 'gameover' | 'winner',
+  state: 'notReady' | 'ready' | 'playing' | 'gameover' | 'winner',
   pos: Coordinate[]
   dir: Directions,
 }
@@ -33,7 +33,7 @@ export type ClientGameData = Omit<GameData, 'interval' | 'players'> & {
 
 export type StrIdxObj<T> = { [key: string]: T }
 
-export type Actions = 'changeDir'
+export type Actions = 'changeDir' | 'toggleReady'
 
 export type ClientMsg<T extends Actions = Actions> = {
   action: Actions,
@@ -42,5 +42,6 @@ export type ClientMsg<T extends Actions = Actions> = {
 type MsgTypes = {
   changeDir: {
     dir: Directions
-  }
+  },
+  toggleReady: {},
 }

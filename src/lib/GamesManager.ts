@@ -14,7 +14,7 @@ export default class GamesManager {
   movements: { [key in Directions]: Coordinate<1 | 0 | -1> }
   defaultTickRate: number;
   defaultBoardSize: number;
-  actions: { [key in Actions]: Function }
+  actions: { [key in Actions]: (ws: ServerWebSocket<ClientData>, msg: ClientMsg<key>) => void }
 
   constructor() {
     this.allGames = {};
@@ -25,9 +25,19 @@ export default class GamesManager {
       'ArrowRight': { row: 0, col: 1 },
     }
     this.actions = {
-      changeDir: (ws: ServerWebSocket<ClientData>, dir: Directions) => {
+      changeDir: (ws, msg) => {
+        const dir = msg.dir
         if (Object.keys(this.movements).includes(dir)) {
           ws.data.dir = dir as Directions;
+        }
+      },
+      toggleReady: (ws, msg) => {
+        ws.data.state = ws.data.state === 'ready' ? 'notReady' : 'ready'
+
+        const allReady = Object.values(this.allGames[ws.data.gameCode].players).every(player => player.data.state === 'ready')
+        if (allReady) {
+          Object.values(this.allGames[ws.data.gameCode].players).forEach(player => player.data.state = 'playing')
+          this.allGames[ws.data.gameCode].gameState = 'running'
         }
       }
     }
@@ -50,13 +60,14 @@ export default class GamesManager {
         players: { [uuid]: ws },
         interval: setInterval(this.refreshGameState(ws.data.gameCode), this.defaultTickRate),
         foodLocations: [],
-        gameState: 'running',
+        // gameState: 'running',
+        gameState: 'lobby'
       }
       // If at all possible, this attribute assignment should be moved into the object above
       this.allGames[ws.data.gameCode].foodLocations = this.getOpenPositions(ws.data.gameCode, 1);
     }
     ws.data.uuid = uuid;
-    ws.data.state = 'playing';
+    ws.data.state = 'notReady';
     ws.data.pos = this.getOpenPositions(ws.data.gameCode, 1);
     ws.data.dir = this.getRandomDir();
     ws.send(JSON.stringify({ ...this.getClientMsg(ws.data.gameCode), uuid }));
@@ -83,7 +94,7 @@ export default class GamesManager {
   // }
 
   clientMsg(ws: ServerWebSocket<ClientData>, msg: ClientMsg) {
-    this.actions[msg.action](ws, msg.dir);
+    this.actions[msg.action](ws, msg as any);
   }
 
   getRandomDir() {
@@ -187,7 +198,11 @@ export default class GamesManager {
         // If there are no available positions, game is over and all players remaining are winners
         if (availablePositions.length === 0) {
           return Object.values(gameInfo.players)
-            .forEach(player => player.data.state = 'winner');
+            .forEach(player => {
+              if (player.data.state === 'playing') {
+                player.data.state = 'winner'
+              }
+            });
         }
         gameInfo.foodLocations = gameInfo.foodLocations.concat(availablePositions);
       }
