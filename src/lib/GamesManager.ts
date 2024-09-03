@@ -2,6 +2,7 @@ import type { ServerWebSocket } from 'bun';
 import type {
   Actions,
   ClientData,
+  ClientGameData,
   ClientMsg,
   Coordinate,
   Directions,
@@ -33,11 +34,13 @@ export default class GamesManager {
       },
       toggleReady: (ws, msg) => {
         ws.data.state = ws.data.state === 'ready' ? 'notReady' : 'ready'
+        this.sendClientMsg(ws.data.gameCode)
 
         const allReady = Object.values(this.allGames[ws.data.gameCode].players).every(player => player.data.state === 'ready')
         if (allReady) {
-          Object.values(this.allGames[ws.data.gameCode].players).forEach(player => player.data.state = 'playing')
-          this.allGames[ws.data.gameCode].gameState = 'running'
+          this.startGame(ws.data.gameCode);
+          // Object.values(this.allGames[ws.data.gameCode].players).forEach(player => player.data.state = 'playing')
+          // this.allGames[ws.data.gameCode].gameState = 'running'
         }
       }
     }
@@ -45,22 +48,25 @@ export default class GamesManager {
     this.defaultBoardSize = 6;
   }
 
-  joinGame(ws: ServerWebSocket<ClientData>) {
+  joinLobby(ws: ServerWebSocket<ClientData>) {
     const game = this.allGames[ws.data.gameCode];
     let uuid = crypto.randomUUID();
     if (game) {
       while (game.players[uuid]) uuid = crypto.randomUUID();
       game.players[uuid] = ws;
-      game.foodLocations = game.foodLocations.concat(this.getOpenPositions(ws.data.gameCode, 1));
-      // game.boardSize = Math.floor(Math.sqrt((game.boardSize ** 2) + 100))
-      game.boardSize = Math.floor(Math.sqrt((this.defaultBoardSize ** 2) * Object.keys(game.players).length + 1));
+      // game.foodLocations = game.foodLocations.concat(this.getOpenPositions(ws.data.gameCode, 1));
+      // game.boardSize = Math.floor(Math.sqrt((this.defaultBoardSize ** 2) * Object.keys(game.players).length + 1));
     } else {
       this.allGames[ws.data.gameCode] = {
-        boardSize: this.defaultBoardSize,
+        // boardSize: this.defaultBoardSize,
+        // players: { [uuid]: ws },
+        // interval: setInterval(this.refreshGameState(ws.data.gameCode), this.defaultTickRate),
+        // foodLocations: [],
+        // gameState: 'lobby'
+        boardSize: 0,
         players: { [uuid]: ws },
-        interval: setInterval(this.refreshGameState(ws.data.gameCode), this.defaultTickRate),
+        interval: setInterval(this.refreshGameState(ws.data.gameCode), Number.MAX_SAFE_INTEGER),
         foodLocations: [],
-        // gameState: 'running',
         gameState: 'lobby'
       }
       // If at all possible, this attribute assignment should be moved into the object above
@@ -68,10 +74,29 @@ export default class GamesManager {
     }
     ws.data.uuid = uuid;
     ws.data.state = 'notReady';
-    ws.data.pos = this.getOpenPositions(ws.data.gameCode, 1);
-    ws.data.dir = this.getRandomDir();
-    ws.send(JSON.stringify({ ...this.getClientMsg(ws.data.gameCode), uuid }));
+    this.sendClientMsg(ws.data.gameCode)
+    // ws.data.pos = this.getOpenPositions(ws.data.gameCode, 1);
+    // ws.data.dir = this.getRandomDir();
+    // ws.send(JSON.stringify({ ...this.getClientMsg(ws.data.gameCode), uuid }));
     // console.log('OPENED', this.allGames)
+  }
+
+  startGame(gameCode: string) {
+    const gameInfo = this.allGames[gameCode];
+    const players = Object.values(gameInfo.players);
+    gameInfo.boardSize = Math.floor(Math.sqrt((this.defaultBoardSize ** 2) * players.length + 1));
+    gameInfo.gameState = 'running';
+    const openPos = this.getOpenPositions(gameCode, players.length * 2);
+
+    players.forEach((player, i) => {
+      const index = i * 2;
+      player.data.pos = [ openPos[index] ];
+      player.data.dir = this.getRandomDir();
+      player.data.state = 'playing';
+      gameInfo.foodLocations.push(openPos[index + 1]);
+    });
+    gameInfo.interval = setInterval(this.refreshGameState(gameCode), this.defaultTickRate);
+    this.sendClientMsg(gameCode);
   }
 
   leaveGame(ws: ServerWebSocket<ClientData>) {
@@ -85,15 +110,7 @@ export default class GamesManager {
     // console.log('CLOSED', this.allGames)
   }
 
-  // changeDir(ws: ServerWebSocket<ClientData>, msg: string | Buffer) {
-  //   // console.log('this is a new msg from', ws.data.uuid, msg)
-  //   const newDir = msg.toString();
-  //   if (Object.keys(this.movements).includes(newDir)) {
-  //     ws.data.dir = newDir as Directions;
-  //   }
-  // }
-
-  clientMsg(ws: ServerWebSocket<ClientData>, msg: ClientMsg) {
+  handleClientMsg(ws: ServerWebSocket<ClientData>, msg: ClientMsg) {
     this.actions[msg.action](ws, msg as any);
   }
 
@@ -127,35 +144,45 @@ export default class GamesManager {
     }).filter(coor => coor);
   }
 
-  getClientMsg(gameCode: string) {
-    return {
+  // getClientMsg(gameCode: string) {
+  //   return {
+  //     ...this.allGames[gameCode],
+  //     players: Object.keys(this.allGames[gameCode].players).reduce((newPlayers, uuid) => {
+  //       newPlayers[uuid] = this.allGames[gameCode].players[uuid].data;
+  //       return newPlayers
+  //     }, {} as StrIdxObj<ClientData>),
+  //     interval: undefined,
+  //   }
+  // }
+
+  sendClientMsg(gameCode: string) {
+    const msg = {
       ...this.allGames[gameCode],
       players: Object.keys(this.allGames[gameCode].players).reduce((newPlayers, uuid) => {
         newPlayers[uuid] = this.allGames[gameCode].players[uuid].data;
         return newPlayers
       }, {} as StrIdxObj<ClientData>),
       interval: undefined,
-    }
-    // const newPlayers: StrIdxObj<ClientData> = {}
-    // Object.keys(this.allGames[gameCode].players).forEach(uuid => {
-    //   newPlayers[uuid] = this.allGames[gameCode].players[uuid].data
-    // })
-
-    // return {
-    //   ...this.allGames[gameCode],
-    //   players: newPlayers,
-    //   interval: undefined,
-    // }
+      uuid: '',
+    } as ClientGameData
+    // const gameState: any = this.getClientMsg(gameCode);
+    Object.values(this.allGames[gameCode].players)
+      .forEach(player => {
+        msg.uuid = player.data.uuid;
+        player.send(JSON.stringify(msg));
+      });
   }
 
   refreshGameState(gameCode: string) {
     return () => {
       const gameInfo = this.allGames[gameCode];
-      if (!gameInfo) return
+      if (!gameInfo) throw Error('Cant find gameCode at refreshGameState method');
 
+      const allPlayers = Object.values(gameInfo.players)
+      const availablePlayers = allPlayers.filter(player => player.data.state === 'playing');
       // Move each character once, and detect out of bounds
-      Object.values(gameInfo.players).forEach(player => {
-        if (player.data.state !== 'playing') return
+      availablePlayers.forEach(player => {
+        // if (player.data.state !== 'playing') return
 
         const { pos, dir } = player.data;
         const newRow = pos[0].row + this.movements[dir].row;
@@ -190,7 +217,7 @@ export default class GamesManager {
 
       // Check active player count and current food count, and add more food if needed
       // and make sure food does not spawn in a position that is alread occupied by a player or food
-      const activePlayerCount = Object.values(gameInfo.players).filter(player => player.data.state === 'playing').length ;
+      const activePlayerCount = Object.values(gameInfo.players).filter(player => player.data.state === 'playing').length;
       const newFoodCount = activePlayerCount - gameInfo.foodLocations.length;
 
       if (newFoodCount > 0) {
@@ -207,16 +234,13 @@ export default class GamesManager {
         gameInfo.foodLocations = gameInfo.foodLocations.concat(availablePositions);
       }
 
-      const gameState: any = this.getClientMsg(gameCode);
-      Object.values(this.allGames[gameCode].players)
-        // .forEach(player => player.send(JSON.stringify({
-        //   ...gameState,
-        //   uuid: player.data.uuid
-        // })));
-        .forEach(player => {
-          gameState.uuid = player.data.uuid;
-          player.send(JSON.stringify(gameState));
-        });
+      this.sendClientMsg(gameCode)
+      // const gameState: any = this.getClientMsg(gameCode);
+      // Object.values(this.allGames[gameCode].players)
+      //   .forEach(player => {
+      //     gameState.uuid = player.data.uuid;
+      //     player.send(JSON.stringify(gameState));
+      //   });
     }
   }
 }

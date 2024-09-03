@@ -1,1 +1,237 @@
-function x(u,k,N){const v=document.createElement(u);if(k)Object.keys(k).forEach((I)=>v[I]=k[I]);if(N?.length)v.append(...N.filter((I)=>I!=null));return v}function Q({boardSize:u}){return x("div",{className:"w-full m-8 border-4 border-black flex flex-col bg-gray-200"},[...Array(u).keys()].map((k)=>{return x("div",{className:"flex flex-1"},[...Array(u).keys()].map((N)=>{return x("div",{id:`cell-${k}-${N}`,className:"aspect-square flex-1 flex justify-center items-center border-[1px] border-gray-300"})}))}))}function V({changeDirFunc:u}){return x("div",{className:"grid grid-cols-3 mx-auto"},[x("div"),x("div",{className:"aspect-square text-7xl",textContent:"\u2B06",onclick:()=>u("ArrowUp")}),x("div"),x("div",{className:"aspect-square text-7xl",textContent:"\u2B05",onclick:()=>u("ArrowLeft")}),x("div"),x("div",{className:"aspect-square text-7xl",textContent:"\u27A1",onclick:()=>u("ArrowRight")}),x("div"),x("div",{className:"aspect-square text-7xl",textContent:"\u2B07",onclick:()=>u("ArrowDown")}),x("div")])}var W=function(u){const k=parseInt(u.substring(0,2),16),N=parseInt(u.substring(2,4),16),v=parseInt(u.substring(4,6),16),I=(255-k).toString(16).padStart(2,"0"),L=(255-N).toString(16).padStart(2,"0"),$=(255-v).toString(16).padStart(2,"0");return`#${I}${L}${$}`},X=function(u){if(!J||J.readyState>1)return;if(console.log("sending websocket msg"),O?.players[O.uuid].state!=="playing")return;const k=["ArrowUp","ArrowDown"],N=["ArrowRight","ArrowLeft"];if(O){const v=O.players[O.uuid].dir;if(console.log("current player dir",v),k.includes(u)&&k.includes(v))return console.log("ignore vertical move");if(N.includes(u)&&N.includes(v))return console.log("ignore horizontal move")}J.send(JSON.stringify({action:"changeDir",dir:u}))},j=function(u){u.preventDefault();const{host:k,protocol:N}=window.location,v=document.querySelector("#colorPicker").value.slice(1),I=document.querySelector("#gameCode").value.toUpperCase(),L=document.querySelector("#joinBtn");if(console.log(v),J){J.close(),J=void 0,L.textContent="Join Game";return}L.textContent="Disconnect",J=new WebSocket(`${N==="http:"?"ws":"wss"}://${k}?gameCode=${I||"general"}&color=${v}`),J.onmessage=($)=>{const A=JSON.parse($.data);O=A,document.querySelector("#gameOver").textContent=A.players[A.uuid].state,document.querySelector("#playerCount").textContent=`Player Count: ${Object.keys(A.players).length.toString()}`,_[A.gameState](A)}},J,O,Y={ArrowUp:"-rotate-90",ArrowRight:"rotate-0",ArrowDown:"rotate-90",ArrowLeft:"rotate-180"},Z={ArrowUp:"rounded-t-3xl",ArrowRight:"rounded-r-3xl",ArrowDown:"rounded-b-3xl",ArrowLeft:"rounded-l-3xl"},_={running:(u)=>{const k=document.querySelector("#board");if(!k)throw Error("Cant find board element");while(k.firstChild)k.removeChild(k.firstChild);k.appendChild(Q({boardSize:u.boardSize})),Object.values(u.players).filter((N)=>N.state!=="gameover").forEach((N)=>{const{pos:v,color:I}=N,L=`#${I}`;v.forEach(({row:$,col:A},P)=>{const q=document.querySelector(`#cell-${$}-${A}`);if(q.style.backgroundColor=L,P===0)q.classList.add(Z[N.dir]),q.appendChild(x("div",{className:`h-full w-full flex flex-col justify-center items-center ${Y[N.dir]}`},[x("div",{className:"h-1/5 w-1/5 rounded-full",id:`lefteye-${N.uuid}`}),x("div",{className:"h-1/5 w-1/5"}),x("div",{className:"h-1/5 w-1/5 rounded-full",id:`righteye-${N.uuid}`})])),document.querySelector(`#lefteye-${N.uuid}`).style.backgroundColor=W(N.color),document.querySelector(`#righteye-${N.uuid}`).style.backgroundColor=W(N.color);const U=v[P-1],G=v[P+1];if(U){if(U.row<$)q.style.borderTopColor=L;if(U.row>$)q.style.borderBottomColor=L;if(U.col<A)q.style.borderLeftColor=L;if(U.col>A)q.style.borderRightColor=L}if(G){if($<G.row)q.style.borderBottomColor=L;if($>G.row)q.style.borderTopColor=L;if(A<G.col)q.style.borderRightColor=L;if(A>G.col)q.style.borderLeftColor=L}if(U&&G){if(U.row<$&&G.col<A)q.classList.add("rounded-br-3xl");if(U.row<$&&G.col>A)q.classList.add("rounded-bl-3xl");if(U.row>$&&G.col<A)q.classList.add("rounded-tr-3xl");if(U.row>$&&G.col>A)q.classList.add("rounded-tl-3xl");if($<G.row&&A<U.col)q.classList.add("rounded-tl-3xl");if($<G.row&&A>U.col)q.classList.add("rounded-tr-3xl");if($>G.row&&A<U.col)q.classList.add("rounded-bl-3xl");if($>G.row&&A>U.col)q.classList.add("rounded-br-3xl")}})}),u.foodLocations.forEach((N)=>{document.querySelector(`#cell-${N.row}-${N.col}`)?.append(x("div",{className:"h-1/2 w-1/2 bg-black rotate-45"}))})},lobby:(u)=>{console.log("rendering lobby",u,u.players[u.uuid]);const k=document.querySelector("#board");if(!k)throw Error("Cant find board element");while(k.firstChild)k.removeChild(k.firstChild);const N=u.players[u.uuid].state==="ready";k.appendChild(x("div",{className:"flex flex-col gap-8 items-center"},[x("div",{textContent:"this is the lobby"}),x("div",{textContent:`Players ready: ${Object.values(u.players).filter((v)=>v.state==="ready").length} / ${Object.keys(u.players).length}`}),x("div",{className:"p-4 flex justify-center items-center gap-4 bg-gray-200 rounded-xl border-2 border-black"},[x("div",{textContent:"Are you ready?"}),x("button",{textContent:"\uD83D\uDD92",className:`p-2 text-6xl transition-all duration-1000 border-2 rounded-xl ${N?"bg-green-300 text-green-500 border-green-500":"rotate-180 bg-red-300 text-red-500 border-red-500"}`,onclick:()=>{console.log("send ready toggle msg to server"),J?.send(JSON.stringify({action:"toggleReady"}))}})])]))}};document.addEventListener("keydown",(u)=>{if(console.log(u.key,O),["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(u.key))X(u.key)});document.body.className="flex flex-col justify-between max-h-screen";document.body.append(x("form",{className:"p-4 flex justify-between items-center border-b-2",onsubmit:j},[x("button",{textContent:"Join General Lobby",className:"p-4 border-4 border-black",id:"joinBtn",type:"submit"}),x("label",{className:"flex items-center gap-4",textContent:"Pick you color:",htmlFor:"colorPicker"},[x("input",{id:"colorPicker",type:"color",value:"#"+[...Array(6).keys()].map(()=>Math.floor(Math.random()*16).toString(16)).join("")})]),x("label",{className:"flex justify-center items-center gap-4",textContent:"Game Code"},[x("input",{id:"gameCode",className:"border-2 border-black p-4",type:"text",minLength:"5",maxLength:"5",required:!1})]),x("span",{id:"gameOver"}),x("span",{id:"playerCount"})]),x("div",{id:"board",className:"aspect-square flex justify-center items-center"}),V({changeDirFunc:X}));
+// src/lib/getTag.ts
+function getTag(type, props, children) {
+  const node = document.createElement(type);
+  if (props)
+    Object.keys(props).forEach((propKey) => node[propKey] = props[propKey]);
+  if (children?.length)
+    node.append(...children.filter((child) => child != null));
+  return node;
+}
+
+// src/components/board.ts
+function board({ boardSize }) {
+  return getTag("div", { className: "w-full m-8 border-4 border-black flex flex-col bg-gray-200" }, [...Array(boardSize).keys()].map((row) => {
+    return getTag("div", { className: "flex flex-1" }, [...Array(boardSize).keys()].map((col) => {
+      return getTag("div", {
+        id: `cell-${row}-${col}`,
+        className: `aspect-square flex-1 flex justify-center items-center border-[1px] border-gray-300`
+      });
+    }));
+  }));
+}
+
+// src/components/onScreenControls.ts
+function onScreenControls({ changeDirFunc }) {
+  return getTag("div", { className: "grid grid-cols-3 mx-auto" }, [
+    getTag("div"),
+    getTag("div", { className: "aspect-square text-7xl", textContent: "\u2B06", onclick: () => changeDirFunc("ArrowUp") }),
+    getTag("div"),
+    getTag("div", { className: "aspect-square text-7xl", textContent: "\u2B05", onclick: () => changeDirFunc("ArrowLeft") }),
+    getTag("div"),
+    getTag("div", { className: "aspect-square text-7xl", textContent: "\u27A1", onclick: () => changeDirFunc("ArrowRight") }),
+    getTag("div"),
+    getTag("div", { className: "aspect-square text-7xl", textContent: "\u2B07", onclick: () => changeDirFunc("ArrowDown") }),
+    getTag("div")
+  ]);
+}
+
+// src/client.ts
+var invertHexColor = function(hex) {
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  const newR = (255 - r).toString(16).padStart(2, "0");
+  const newG = (255 - g).toString(16).padStart(2, "0");
+  const newB = (255 - b).toString(16).padStart(2, "0");
+  return `#${newR}${newG}${newB}`;
+};
+var changeDirection = function(dir) {
+  if (!ws || ws.readyState > 1)
+    return;
+  console.log("sending websocket msg");
+  if (lastMsg?.players[lastMsg.uuid].state !== "playing") {
+    return;
+  }
+  const verticalMoves = ["ArrowUp", "ArrowDown"];
+  const horizontalMoves = ["ArrowRight", "ArrowLeft"];
+  if (lastMsg) {
+    const currentDir = lastMsg.players[lastMsg.uuid].dir;
+    console.log("current player dir", currentDir);
+    if (verticalMoves.includes(dir) && verticalMoves.includes(currentDir))
+      return console.log("ignore vertical move");
+    if (horizontalMoves.includes(dir) && horizontalMoves.includes(currentDir))
+      return console.log("ignore horizontal move");
+  }
+  ws.send(JSON.stringify({
+    action: "changeDir",
+    dir
+  }));
+};
+var submitFunc = function(e) {
+  e.preventDefault();
+  const { host, protocol } = window.location;
+  const color = document.querySelector("#colorPicker").value.slice(1);
+  const gameCode = document.querySelector("#gameCode").value.toUpperCase();
+  const joinBtn = document.querySelector("#joinBtn");
+  console.log(color);
+  if (ws) {
+    ws.close();
+    ws = undefined;
+    joinBtn.textContent = "Join Game";
+    return;
+  }
+  joinBtn.textContent = "Disconnect";
+  ws = new WebSocket(`${protocol === "http:" ? "ws" : "wss"}://${host}?gameCode=${gameCode || "general"}&color=${color}`);
+  ws.onmessage = (ws) => {
+    const msg = JSON.parse(ws.data);
+    lastMsg = msg;
+    document.querySelector("#gameOver").textContent = msg.players[msg.uuid].state;
+    document.querySelector("#playerCount").textContent = `Player Count: ${Object.keys(msg.players).length.toString()}`;
+    renders[msg.gameState](msg);
+  };
+};
+var ws;
+var lastMsg;
+var renderDirection = {
+  ArrowUp: "-rotate-90",
+  ArrowRight: "rotate-0",
+  ArrowDown: "rotate-90",
+  ArrowLeft: "rotate-180"
+};
+var roundingDir = {
+  ArrowUp: "rounded-t-3xl",
+  ArrowRight: "rounded-r-3xl",
+  ArrowDown: "rounded-b-3xl",
+  ArrowLeft: "rounded-l-3xl"
+};
+var renders = {
+  running: (msg) => {
+    const boardElement = document.querySelector("#board");
+    if (!boardElement)
+      throw Error("Cant find board element");
+    while (boardElement.firstChild) {
+      boardElement.removeChild(boardElement.firstChild);
+    }
+    boardElement.appendChild(board({ boardSize: msg.boardSize }));
+    Object.values(msg.players).filter((player) => ["playing", "winner"].includes(player.state)).forEach((player) => {
+      const { pos, color } = player;
+      const playerColor = `#${color}`;
+      pos.forEach(({ row, col }, i) => {
+        const cell = document.querySelector(`#cell-${row}-${col}`);
+        cell.style.backgroundColor = playerColor;
+        if (i === 0) {
+          cell.classList.add(roundingDir[player.dir]);
+          cell.appendChild(getTag("div", { className: `h-full w-full flex flex-col justify-center items-center ${renderDirection[player.dir]}` }, [
+            getTag("div", { className: "h-1/5 w-1/5 rounded-full", id: `lefteye-${player.uuid}` }),
+            getTag("div", { className: "h-1/5 w-1/5" }),
+            getTag("div", { className: "h-1/5 w-1/5 rounded-full", id: `righteye-${player.uuid}` })
+          ]));
+          document.querySelector(`#lefteye-${player.uuid}`).style.backgroundColor = invertHexColor(player.color);
+          document.querySelector(`#righteye-${player.uuid}`).style.backgroundColor = invertHexColor(player.color);
+        }
+        const before = pos[i - 1];
+        const after = pos[i + 1];
+        if (before) {
+          if (before.row < row)
+            cell.style.borderTopColor = playerColor;
+          if (before.row > row)
+            cell.style.borderBottomColor = playerColor;
+          if (before.col < col)
+            cell.style.borderLeftColor = playerColor;
+          if (before.col > col)
+            cell.style.borderRightColor = playerColor;
+        }
+        if (after) {
+          if (row < after.row)
+            cell.style.borderBottomColor = playerColor;
+          if (row > after.row)
+            cell.style.borderTopColor = playerColor;
+          if (col < after.col)
+            cell.style.borderRightColor = playerColor;
+          if (col > after.col)
+            cell.style.borderLeftColor = playerColor;
+        }
+        if (before && after) {
+          if (before.row < row && after.col < col)
+            cell.classList.add("rounded-br-3xl");
+          if (before.row < row && after.col > col)
+            cell.classList.add("rounded-bl-3xl");
+          if (before.row > row && after.col < col)
+            cell.classList.add("rounded-tr-3xl");
+          if (before.row > row && after.col > col)
+            cell.classList.add("rounded-tl-3xl");
+          if (row < after.row && col < before.col)
+            cell.classList.add("rounded-tl-3xl");
+          if (row < after.row && col > before.col)
+            cell.classList.add("rounded-tr-3xl");
+          if (row > after.row && col < before.col)
+            cell.classList.add("rounded-bl-3xl");
+          if (row > after.row && col > before.col)
+            cell.classList.add("rounded-br-3xl");
+        }
+      });
+    });
+    msg.foodLocations.forEach((coor) => {
+      document.querySelector(`#cell-${coor.row}-${coor.col}`)?.append(getTag("div", { className: "h-1/2 w-1/2 bg-black rotate-45" }));
+    });
+  },
+  lobby: (msg) => {
+    console.log("rendering lobby", msg, msg.players[msg.uuid]);
+    const boardElement = document.querySelector("#board");
+    if (!boardElement)
+      throw Error("Cant find board element");
+    while (boardElement.firstChild) {
+      boardElement.removeChild(boardElement.firstChild);
+    }
+    const isReady = msg.players[msg.uuid].state === "ready";
+    boardElement.appendChild(getTag("div", { className: "flex flex-col gap-8 items-center" }, [
+      getTag("div", { textContent: "this is the lobby" }),
+      getTag("div", { textContent: `Players ready: ${Object.values(msg.players).filter((player) => player.state === "ready").length} / ${Object.keys(msg.players).length}` }),
+      getTag("div", { className: `p-4 flex justify-center items-center gap-4 bg-gray-200 rounded-xl border-2 border-black` }, [
+        getTag("div", { textContent: "Are you ready?" }),
+        getTag("button", {
+          textContent: "\uD83D\uDD92",
+          className: `p-2 text-6xl transition-all duration-1000 border-2 rounded-xl ${isReady ? "bg-green-300 text-green-500 border-green-500" : "rotate-180 bg-red-300 text-red-500 border-red-500"}`,
+          onclick: () => {
+            console.log("send ready toggle msg to server");
+            ws?.send(JSON.stringify({ action: "toggleReady" }));
+          }
+        })
+      ])
+    ]));
+  }
+};
+document.addEventListener("keydown", (e) => {
+  console.log(e.key, lastMsg);
+  if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+    changeDirection(e.key);
+  }
+});
+document.body.className = "flex flex-col justify-between max-h-screen";
+document.body.append(getTag("form", { className: "p-4 flex justify-between items-center border-b-2 flex-wrap", onsubmit: submitFunc }, [
+  getTag("button", {
+    textContent: "Join General Lobby",
+    className: "p-4 border-4 border-black",
+    id: "joinBtn",
+    type: "submit"
+  }),
+  getTag("label", { className: "flex items-center gap-4", textContent: "Pick you color:", htmlFor: "colorPicker" }, [
+    getTag("input", {
+      id: "colorPicker",
+      type: "color",
+      value: "#" + [...Array(6).keys()].map(() => Math.floor(Math.random() * 16).toString(16)).join("")
+    })
+  ]),
+  getTag("label", { className: "flex justify-center items-center gap-4", textContent: "Game Code" }, [
+    getTag("input", {
+      id: "gameCode",
+      className: "border-2 border-black p-4",
+      type: "text",
+      minLength: "5",
+      maxLength: "5",
+      required: false
+    })
+  ]),
+  getTag("span", { id: "gameOver" }),
+  getTag("span", { id: "playerCount" })
+]), getTag("div", { id: "board", className: "aspect-square flex justify-center items-center" }), onScreenControls({ changeDirFunc: changeDirection }));

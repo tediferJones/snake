@@ -1,4 +1,6 @@
-const playerCount = 8;
+import type { ClientGameData, ClientMsg } from '@/types';
+
+const playerCount = 128;
 
 const dirs = [
   'ArrowUp',
@@ -7,43 +9,47 @@ const dirs = [
   'ArrowLeft',
 ]
 
-let count = 0;
-
-// const players: WebSocket[] = []
-// for (let i = 0; i < playerCount; i++) {
-//   players.push(
-//     new WebSocket(`ws://localhost:3000/?gameCode=general&color=${[ ...Array(6).keys() ].map(() => Math.floor(Math.random() * 16).toString(16)).join('')}`)
-//   )
-// }
-// 
-// await new Promise((resolve, reject) => {
-//   console.log('promise')
-//   if (players.every(ws => ws.readyState > 0)) {
-//     resolve(true)
-//   }
-// })
-
-const openingQueue: Promise<void>[] = []
-const players: WebSocket[] = []
+let gameOverCount = 0;
+const openingQueue: Promise<void>[] = [];
+const players: WebSocket[] = [];
 for (let i = 0; i < playerCount; i++) {
   openingQueue.push(
     new Promise((resolve, reject) => {
       const ws = new WebSocket(`ws://localhost:3000/?gameCode=general&color=${[ ...Array(6).keys() ].map(() => Math.floor(Math.random() * 16).toString(16)).join('')}`)
       ws.onopen = () => {
-        players.push(ws);
+        // players.push(ws);
+        players[i] = ws
         resolve();
       }
       ws.onerror = (err) => reject(err);
+      // ws.onmessage = (ws) => {
+      //   const msg = JSON.parse(ws.data) as ClientGameData;
+      //   if (['gameover', 'winner'].includes(msg.players[msg.uuid].state)) {
+      //     gameOverCount++
+      //     console.log('before', players.length)
+      //     players.splice(i, 1)
+      //     console.log('after', players.length)
+      //   }
+      //   // if (gameOverCount === playerCount) clearInterval(interval)
+      //   // console.log(gameOverCount, playerCount)
+      // }
     })
   )
 }
 
 await Promise.all(openingQueue)
-console.log(players)
 
+players.forEach(ws => {
+  ws.send(JSON.stringify({ action: 'toggleReady' }))
+})
+
+// const interval =
 setInterval(() => {
-  console.log('sending msg', players)
-  // players.forEach(ws => ws.send(dirs[count]))
-  // count = count >= 3 ? 0 : count + 1
-  players.forEach(ws => ws.send(dirs[Math.floor(Math.random() * dirs.length)]))
+  players.forEach(ws => {
+    console.log(players.length)
+    ws.send(JSON.stringify({
+      action: 'changeDir',
+      dir: dirs[Math.floor(Math.random() * dirs.length)],
+    } as ClientMsg<'changeDir'>))
+  })
 }, 500)

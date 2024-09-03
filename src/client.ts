@@ -31,7 +31,8 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
     boardElement.appendChild(board({ boardSize: msg.boardSize }));
 
     // Color in where the players are
-    Object.values(msg.players).filter(player => player.state !== 'gameover').forEach(player => {
+    // Object.values(msg.players).filter(player => player.state !== 'gameover').forEach(player => {
+    Object.values(msg.players).filter(player => ['playing', 'winner'].includes(player.state)).forEach(player => {
       const { pos, color } = player;
       const playerColor = `#${color}`;
       pos.forEach(({ row, col }, i) => {
@@ -177,7 +178,6 @@ function submitFunc(e: SubmitEvent) {
     lastMsg = msg;
 
     // Update player status
-    // document.querySelector('#gameOver')!.textContent = '';
     document.querySelector('#gameOver')!.textContent = msg.players[msg.uuid].state
     document.querySelector('#playerCount')!.textContent = `Player Count: ${Object.keys(msg.players).length.toString()}`
 
@@ -196,7 +196,7 @@ document.addEventListener('keydown', e => {
 document.body.className = 'flex flex-col justify-between max-h-screen';
 
 document.body.append(
-  t('form', { className: 'p-4 flex justify-between items-center border-b-2', onsubmit: submitFunc }, [
+  t('form', { className: 'p-4 flex justify-between items-center border-b-2 flex-wrap', onsubmit: submitFunc }, [
     t('button', {
       textContent: 'Join General Lobby',
       className: 'p-4 border-4 border-black',

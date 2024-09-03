@@ -4,8 +4,8 @@ import GamesManager from '@/lib/GamesManager';
 await Bun.build({
   entrypoints: [ 'src/client.ts' ],
   outdir: 'public/',
-  minify: true,
-  splitting: true,
+  // minify: true,
+  // splitting: true,
 })
 
 Bun.spawnSync('bunx tailwindcss -i src/globals.css -o public/style.css --minify'.split(' '))
@@ -32,8 +32,8 @@ Bun.serve<ClientData>({
   },
   websocket: {
     // message: (ws, msg) => GamesMan.changeDir(ws, msg),
-    message: (ws, msg) => GamesMan.clientMsg(ws, JSON.parse(msg.toString())),
-    open: (ws) => GamesMan.joinGame(ws),
+    message: (ws, msg) => GamesMan.handleClientMsg(ws, JSON.parse(msg.toString())),
+    open: (ws) => GamesMan.joinLobby(ws),
     close: (ws) => GamesMan.leaveGame(ws),
   }
 });
