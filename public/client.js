@@ -72,6 +72,7 @@ var submitFunc = function(e) {
   const { host, protocol } = window.location;
   const color = document.querySelector("#colorPicker").value.slice(1);
   const gameCode = document.querySelector("#gameCode").value.toUpperCase();
+  const username = document.querySelector("#username").value;
   const joinBtn = document.querySelector("#joinBtn");
   console.log(color);
   if (ws) {
@@ -81,7 +82,7 @@ var submitFunc = function(e) {
     return;
   }
   joinBtn.textContent = "Disconnect";
-  ws = new WebSocket(`${protocol === "http:" ? "ws" : "wss"}://${host}?gameCode=${gameCode || "general"}&color=${color}`);
+  ws = new WebSocket(`${protocol === "http:" ? "ws" : "wss"}://${host}?gameCode=${gameCode || "general"}&color=${color}&username=${username}`);
   ws.onmessage = (ws) => {
     const msg = JSON.parse(ws.data);
     lastMsg = msg;
@@ -199,6 +200,20 @@ var renders = {
         })
       ])
     ]));
+  },
+  done: (msg) => {
+    renders.running(msg);
+    const leaderboard = document.querySelector("#leaderboard");
+    leaderboard.appendChild(getTag("div", { className: "flex flex-col items-center gap-4" }, [
+      ...Object.values(msg.players).filter((player) => player.pos.length > 0).sort((a, b) => b.pos.length - a.pos.length).map((player, i) => getTag("div", { className: "flex gap-4" }, [
+        getTag("span", { textContent: `${i + 1}.)` }),
+        getTag("span", {
+          textContent: player.username,
+          className: `text-xl font-bold ${player.state === "winner" ? "text-yellow-500" : player.state === "gameover" ? "text-red-500" : ""}`
+        }),
+        getTag("span", { textContent: player.pos.length.toString() })
+      ]))
+    ]));
   }
 };
 document.addEventListener("keydown", (e) => {
@@ -222,6 +237,15 @@ document.body.append(getTag("form", { className: "p-4 flex justify-between items
       value: "#" + [...Array(6).keys()].map(() => Math.floor(Math.random() * 16).toString(16)).join("")
     })
   ]),
+  getTag("label", { className: "flex justify-center items-center gap-4", textContent: "Username" }, [
+    getTag("input", {
+      id: "username",
+      type: "text",
+      maxLength: "32",
+      required: true,
+      className: "border-2 border-black p-4"
+    })
+  ]),
   getTag("label", { className: "flex justify-center items-center gap-4", textContent: "Game Code" }, [
     getTag("input", {
       id: "gameCode",
@@ -234,4 +258,4 @@ document.body.append(getTag("form", { className: "p-4 flex justify-between items
   ]),
   getTag("span", { id: "gameOver" }),
   getTag("span", { id: "playerCount" })
-]), getTag("div", { id: "board", className: "aspect-square flex justify-center items-center" }), onScreenControls({ changeDirFunc: changeDirection }));
+]), getTag("div", { id: "board", className: "aspect-square flex justify-center items-center" }), getTag("div", { id: "leaderboard" }), onScreenControls({ changeDirFunc: changeDirection }));

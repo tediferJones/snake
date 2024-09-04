@@ -18,7 +18,8 @@ Bun.serve<ClientData>({
     // console.log(req.url)
     if (server.upgrade(req, { data: {
       gameCode: searchParams.get('gameCode'),
-      color: searchParams.get('color')
+      color: searchParams.get('color'),
+      username: searchParams.get('username')
     } })) return
 
     if (pathname === '/') pathname = '/index.html';
@@ -34,6 +35,6 @@ Bun.serve<ClientData>({
     // message: (ws, msg) => GamesMan.changeDir(ws, msg),
     message: (ws, msg) => GamesMan.handleClientMsg(ws, JSON.parse(msg.toString())),
     open: (ws) => GamesMan.joinLobby(ws),
-    close: (ws) => GamesMan.leaveGame(ws),
+    close: (ws) => GamesMan.leaveLobby(ws),
   }
 });

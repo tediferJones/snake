@@ -116,6 +116,28 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
       ])
     )
   },
+  done: (msg) => {
+    renders.running(msg)
+    const leaderboard = document.querySelector('#leaderboard')!
+    leaderboard.appendChild(
+      t('div', { className: 'flex flex-col items-center gap-4' }, [
+        ...Object.values(msg.players)
+        .filter(player => player.pos.length > 0)
+        .sort((a, b) => b.pos.length - a.pos.length)
+        .map((player, i) => 
+          t('div', { className: 'flex gap-4' }, [
+            t('span', { textContent: `${i + 1}.)` }),
+            t('span', {
+              textContent: player.username,
+              className: `text-xl font-bold ${player.state === 'winner' ? 'text-yellow-500' :
+                player.state === 'gameover' ? 'text-red-500' : ''}`
+            }),
+            t('span', { textContent: player.pos.length.toString() }),
+          ])
+        )
+      ])
+    )
+  }
 }
 
 function invertHexColor(hex: string) {
@@ -162,6 +184,7 @@ function submitFunc(e: SubmitEvent) {
   const { host, protocol } = window.location;
   const color = (document.querySelector('#colorPicker') as HTMLInputElement).value.slice(1);
   const gameCode = (document.querySelector('#gameCode') as HTMLInputElement).value.toUpperCase();
+  const username = (document.querySelector('#username') as HTMLInputElement).value;
   const joinBtn = document.querySelector('#joinBtn')! as HTMLButtonElement;
   console.log(color);
   if (ws) {
@@ -172,7 +195,7 @@ function submitFunc(e: SubmitEvent) {
   }
   joinBtn.textContent = 'Disconnect'
 
-  ws = new WebSocket(`${protocol === 'http:' ? 'ws' : 'wss'}://${host}?gameCode=${gameCode || 'general'}&color=${color}`)
+  ws = new WebSocket(`${protocol === 'http:' ? 'ws' : 'wss'}://${host}?gameCode=${gameCode || 'general'}&color=${color}&username=${username}`)
   ws.onmessage = (ws) => {
     const msg: ClientGameData = JSON.parse(ws.data)
     lastMsg = msg;
@@ -211,6 +234,15 @@ document.body.append(
         value: '#' + [ ...Array(6).keys() ].map(() => Math.floor(Math.random() * 16).toString(16)).join('')
       }),
     ]),
+    t('label', { className: 'flex justify-center items-center gap-4', textContent: 'Username' }, [
+      t('input', {
+        id: 'username',
+        type: 'text',
+        maxLength: '32',
+        required: true,
+        className: 'border-2 border-black p-4'
+      })
+    ]),
     t('label', { className: 'flex justify-center items-center gap-4', textContent: 'Game Code' }, [
       t('input', {
         id: 'gameCode',
@@ -225,5 +257,6 @@ document.body.append(
     t('span', { id: 'playerCount' }),
   ]),
   t('div', { id: 'board', className: 'aspect-square flex justify-center items-center' }),
+  t('div', { id: 'leaderboard' }),
   onScreenControls({ changeDirFunc: changeDirection })
 );

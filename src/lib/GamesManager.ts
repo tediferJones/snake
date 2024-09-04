@@ -99,7 +99,7 @@ export default class GamesManager {
     this.sendClientMsg(gameCode);
   }
 
-  leaveGame(ws: ServerWebSocket<ClientData>) {
+  leaveLobby(ws: ServerWebSocket<ClientData>) {
     const gameInfo = this.allGames[ws.data.gameCode];
     delete gameInfo.players[ws.data.uuid];
     gameInfo.foodLocations.shift();
@@ -143,17 +143,6 @@ export default class GamesManager {
       return randomPosition;
     }).filter(coor => coor);
   }
-
-  // getClientMsg(gameCode: string) {
-  //   return {
-  //     ...this.allGames[gameCode],
-  //     players: Object.keys(this.allGames[gameCode].players).reduce((newPlayers, uuid) => {
-  //       newPlayers[uuid] = this.allGames[gameCode].players[uuid].data;
-  //       return newPlayers
-  //     }, {} as StrIdxObj<ClientData>),
-  //     interval: undefined,
-  //   }
-  // }
 
   sendClientMsg(gameCode: string) {
     const msg = {
@@ -215,6 +204,13 @@ export default class GamesManager {
         }
       });
 
+      if (Object.values(gameInfo.players).every(player => player.data.state !== 'playing')) {
+        gameInfo.gameState = 'done'
+        clearInterval(gameInfo.interval)
+        this.sendClientMsg(gameCode)
+        return
+      }
+
       // Check active player count and current food count, and add more food if needed
       // and make sure food does not spawn in a position that is alread occupied by a player or food
       const activePlayerCount = Object.values(gameInfo.players).filter(player => player.data.state === 'playing').length;
@@ -224,10 +220,11 @@ export default class GamesManager {
         const availablePositions = this.getOpenPositions(gameCode, newFoodCount);
         // If there are no available positions, game is over and all players remaining are winners
         if (availablePositions.length === 0) {
+          gameInfo.gameState = 'done';
           return Object.values(gameInfo.players)
             .forEach(player => {
               if (player.data.state === 'playing') {
-                player.data.state = 'winner'
+                player.data.state = 'winner';
               }
             });
         }
@@ -235,12 +232,6 @@ export default class GamesManager {
       }
 
       this.sendClientMsg(gameCode)
-      // const gameState: any = this.getClientMsg(gameCode);
-      // Object.values(this.allGames[gameCode].players)
-      //   .forEach(player => {
-      //     gameState.uuid = player.data.uuid;
-      //     player.send(JSON.stringify(gameState));
-      //   });
     }
   }
 }

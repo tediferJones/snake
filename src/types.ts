@@ -14,6 +14,7 @@ export type ClientData = {
   state: 'notReady' | 'ready' | 'playing' | 'gameover' | 'winner',
   pos: Coordinate[]
   dir: Directions,
+  username: string,
 }
 
 export type ClientSocket = ServerWebSocket<ClientData>;
@@ -23,7 +24,7 @@ export type GameData = {
   players: StrIdxObj<ClientSocket>,
   interval: Timer,
   foodLocations: Coordinate[],
-  gameState: 'lobby' | 'running'
+  gameState: 'lobby' | 'running' | 'done'
 }
 
 export type ClientGameData = Omit<GameData, 'interval' | 'players'> & {
