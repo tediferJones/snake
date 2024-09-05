@@ -1,6 +1,6 @@
 import type { ClientGameData, ClientMsg } from '@/types';
 
-const playerCount = 128;
+const playerCount = 16;
 
 const dirs = [
   'ArrowUp',

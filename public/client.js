@@ -36,6 +36,15 @@ function onScreenControls({ changeDirFunc }) {
 }
 
 // src/client.ts
+var clearContainer = function(id) {
+  const element = document.querySelector(`#${id}`);
+  if (!element)
+    throw Error("Cant find board element");
+  while (element.firstChild) {
+    element.removeChild(element.firstChild);
+  }
+  return element;
+};
 var invertHexColor = function(hex) {
   const r = parseInt(hex.substring(0, 2), 16);
   const g = parseInt(hex.substring(2, 4), 16);
@@ -105,16 +114,12 @@ var roundingDir = {
   ArrowDown: "rounded-b-3xl",
   ArrowLeft: "rounded-l-3xl"
 };
+var drawPlayerSet = new Set(["playing", "winner"]);
 var renders = {
   running: (msg) => {
-    const boardElement = document.querySelector("#board");
-    if (!boardElement)
-      throw Error("Cant find board element");
-    while (boardElement.firstChild) {
-      boardElement.removeChild(boardElement.firstChild);
-    }
+    const boardElement = clearContainer("board");
     boardElement.appendChild(board({ boardSize: msg.boardSize }));
-    Object.values(msg.players).filter((player) => ["playing", "winner"].includes(player.state)).forEach((player) => {
+    Object.values(msg.players).filter((player) => drawPlayerSet.has(player.state) || drawPlayerSet.has(player.oldState)).forEach((player) => {
       const { pos, color } = player;
       const playerColor = `#${color}`;
       pos.forEach(({ row, col }, i) => {
@@ -178,15 +183,10 @@ var renders = {
   },
   lobby: (msg) => {
     console.log("rendering lobby", msg, msg.players[msg.uuid]);
-    const boardElement = document.querySelector("#board");
-    if (!boardElement)
-      throw Error("Cant find board element");
-    while (boardElement.firstChild) {
-      boardElement.removeChild(boardElement.firstChild);
-    }
+    const boardElement = clearContainer("board");
+    clearContainer("leaderboard");
     const isReady = msg.players[msg.uuid].state === "ready";
     boardElement.appendChild(getTag("div", { className: "flex flex-col gap-8 items-center" }, [
-      getTag("div", { textContent: "this is the lobby" }),
       getTag("div", { textContent: `Players ready: ${Object.values(msg.players).filter((player) => player.state === "ready").length} / ${Object.keys(msg.players).length}` }),
       getTag("div", { className: `p-4 flex justify-center items-center gap-4 bg-gray-200 rounded-xl border-2 border-black` }, [
         getTag("div", { textContent: "Are you ready?" }),
@@ -203,13 +203,26 @@ var renders = {
   },
   done: (msg) => {
     renders.running(msg);
-    const leaderboard = document.querySelector("#leaderboard");
+    const leaderboard = clearContainer("leaderboard");
+    const rematch = msg.players[msg.uuid].state === "rematch";
     leaderboard.appendChild(getTag("div", { className: "flex flex-col items-center gap-4" }, [
+      getTag("div", { textContent: `Players ready: ${Object.values(msg.players).filter((player) => player.state === "rematch").length} / ${Object.keys(msg.players).length}` }),
+      getTag("div", { className: `p-4 flex justify-center items-center gap-4 bg-gray-200 rounded-xl border-2 border-black` }, [
+        getTag("div", { textContent: "Do you want a rematch?" }),
+        getTag("button", {
+          textContent: "\uD83D\uDD92",
+          className: `p-2 text-6xl transition-all duration-1000 border-2 rounded-xl ${rematch ? "bg-green-300 text-green-500 border-green-500" : "rotate-180 bg-red-300 text-red-500 border-red-500"}`,
+          onclick: () => {
+            console.log("send ready toggle msg to server");
+            ws?.send(JSON.stringify({ action: "toggleRematch" }));
+          }
+        })
+      ]),
       ...Object.values(msg.players).filter((player) => player.pos.length > 0).sort((a, b) => b.pos.length - a.pos.length).map((player, i) => getTag("div", { className: "flex gap-4" }, [
         getTag("span", { textContent: `${i + 1}.)` }),
         getTag("span", {
           textContent: player.username,
-          className: `text-xl font-bold ${player.state === "winner" ? "text-yellow-500" : player.state === "gameover" ? "text-red-500" : ""}`
+          className: `text-xl font-bold ${player.state === "winner" ? "text-yellow-500" : player.state === "gameover" ? "text-red-500" : player.state === "rematch" ? "text-green-500" : ""}`
         }),
         getTag("span", { textContent: player.pos.length.toString() })
       ]))
@@ -239,11 +252,12 @@ document.body.append(getTag("form", { className: "p-4 flex justify-between items
   ]),
   getTag("label", { className: "flex justify-center items-center gap-4", textContent: "Username" }, [
     getTag("input", {
+      className: "border-2 border-black p-4",
       id: "username",
       type: "text",
       maxLength: "32",
       required: true,
-      className: "border-2 border-black p-4"
+      value: [...Array(6).keys()].map(() => String.fromCharCode(Math.floor(Math.random() * 57) + 65)).join("")
     })
   ]),
   getTag("label", { className: "flex justify-center items-center gap-4", textContent: "Game Code" }, [

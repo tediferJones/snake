@@ -1,4 +1,4 @@
-import type { ClientData } from '@/types';
+import type { Actions, ClientData, ClientMsg } from '@/types';
 import GamesManager from '@/lib/GamesManager';
 
 await Bun.build({
@@ -33,7 +33,11 @@ Bun.serve<ClientData>({
   },
   websocket: {
     // message: (ws, msg) => GamesMan.changeDir(ws, msg),
-    message: (ws, msg) => GamesMan.handleClientMsg(ws, JSON.parse(msg.toString())),
+    // message: (ws, msg) => GamesMan.handleClientMsg(ws, JSON.parse(msg.toString())),
+    message: (ws, msg) => {
+      const clientMsg = JSON.parse(msg.toString())
+      GamesMan.actions[clientMsg.action as Actions](ws, clientMsg)
+    },
     open: (ws) => GamesMan.joinLobby(ws),
     close: (ws) => GamesMan.leaveLobby(ws),
   }

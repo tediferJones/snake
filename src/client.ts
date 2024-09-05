@@ -20,67 +20,72 @@ const roundingDir = {
   ArrowLeft: 'rounded-l-3xl',
 }
 
+const drawPlayerSet = new Set(['playing', 'winner'])
+
 const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData) => void } = {
   running: (msg) => {
     // Draw game board
-    const boardElement = document.querySelector('#board');
-    if (!boardElement) throw Error('Cant find board element')
-    while (boardElement.firstChild) {
-      boardElement.removeChild(boardElement.firstChild)
-    }
+    // const boardElement = document.querySelector('#board');
+    // if (!boardElement) throw Error('Cant find board element')
+    // while (boardElement.firstChild) {
+    //   boardElement.removeChild(boardElement.firstChild)
+    // }
+    const boardElement = clearContainer('board');
     boardElement.appendChild(board({ boardSize: msg.boardSize }));
 
     // Color in where the players are
     // Object.values(msg.players).filter(player => player.state !== 'gameover').forEach(player => {
-    Object.values(msg.players).filter(player => ['playing', 'winner'].includes(player.state)).forEach(player => {
-      const { pos, color } = player;
-      const playerColor = `#${color}`;
-      pos.forEach(({ row, col }, i) => {
-        const cell = (document.querySelector(`#cell-${row}-${col}`) as HTMLDivElement)
-        cell.style.backgroundColor = playerColor;
-        if (i === 0) { 
-          cell.classList.add(roundingDir[player.dir])
-          cell.appendChild(
-            t('div', { className: `h-full w-full flex flex-col justify-center items-center ${renderDirection[player.dir]}` }, [
-              t('div', { className: 'h-1/5 w-1/5 rounded-full', id: `lefteye-${player.uuid}` }),
-              t('div', { className: 'h-1/5 w-1/5' }),
-              t('div', { className: 'h-1/5 w-1/5 rounded-full', id: `righteye-${player.uuid}` }),
-            ])
-          );
-          (document.querySelector(`#lefteye-${player.uuid}`) as HTMLDivElement).style.backgroundColor = invertHexColor(player.color);
-          (document.querySelector(`#righteye-${player.uuid}`) as HTMLDivElement).style.backgroundColor = invertHexColor(player.color);
-        }
+    Object.values(msg.players)
+      .filter(player => drawPlayerSet.has(player.state) || drawPlayerSet.has(player.oldState!))
+      .forEach(player => {
+        const { pos, color } = player;
+        const playerColor = `#${color}`;
+        pos.forEach(({ row, col }, i) => {
+          const cell = (document.querySelector(`#cell-${row}-${col}`) as HTMLDivElement)
+          cell.style.backgroundColor = playerColor;
+          if (i === 0) { 
+            cell.classList.add(roundingDir[player.dir])
+            cell.appendChild(
+              t('div', { className: `h-full w-full flex flex-col justify-center items-center ${renderDirection[player.dir]}` }, [
+                t('div', { className: 'h-1/5 w-1/5 rounded-full', id: `lefteye-${player.uuid}` }),
+                t('div', { className: 'h-1/5 w-1/5' }),
+                t('div', { className: 'h-1/5 w-1/5 rounded-full', id: `righteye-${player.uuid}` }),
+              ])
+            );
+            (document.querySelector(`#lefteye-${player.uuid}`) as HTMLDivElement).style.backgroundColor = invertHexColor(player.color);
+            (document.querySelector(`#righteye-${player.uuid}`) as HTMLDivElement).style.backgroundColor = invertHexColor(player.color);
+          }
 
-        // Add outline to player
-        const before = pos[i - 1];
-        const after = pos[i + 1]
-        if (before) {
-          if (before.row < row) cell.style.borderTopColor = playerColor;
-          if (before.row > row) cell.style.borderBottomColor = playerColor;
-          if (before.col < col) cell.style.borderLeftColor = playerColor;
-          if (before.col > col) cell.style.borderRightColor = playerColor;
-        }
+          // Add outline to player
+          const before = pos[i - 1];
+          const after = pos[i + 1]
+          if (before) {
+            if (before.row < row) cell.style.borderTopColor = playerColor;
+            if (before.row > row) cell.style.borderBottomColor = playerColor;
+            if (before.col < col) cell.style.borderLeftColor = playerColor;
+            if (before.col > col) cell.style.borderRightColor = playerColor;
+          }
 
-        if (after) {
-          if (row < after.row) cell.style.borderBottomColor = playerColor;
-          if (row > after.row) cell.style.borderTopColor = playerColor;
-          if (col < after.col) cell.style.borderRightColor = playerColor;
-          if (col > after.col) cell.style.borderLeftColor = playerColor;
-        }
+          if (after) {
+            if (row < after.row) cell.style.borderBottomColor = playerColor;
+            if (row > after.row) cell.style.borderTopColor = playerColor;
+            if (col < after.col) cell.style.borderRightColor = playerColor;
+            if (col > after.col) cell.style.borderLeftColor = playerColor;
+          }
 
-        if (before && after) {
-          if (before.row < row && after.col < col) cell.classList.add('rounded-br-3xl')
-          if (before.row < row && after.col > col) cell.classList.add('rounded-bl-3xl')
-          if (before.row > row && after.col < col) cell.classList.add('rounded-tr-3xl')
-          if (before.row > row && after.col > col) cell.classList.add('rounded-tl-3xl')
+          if (before && after) {
+            if (before.row < row && after.col < col) cell.classList.add('rounded-br-3xl')
+            if (before.row < row && after.col > col) cell.classList.add('rounded-bl-3xl')
+            if (before.row > row && after.col < col) cell.classList.add('rounded-tr-3xl')
+            if (before.row > row && after.col > col) cell.classList.add('rounded-tl-3xl')
 
-          if (row < after.row && col < before.col) cell.classList.add('rounded-tl-3xl')
-          if (row < after.row && col > before.col) cell.classList.add('rounded-tr-3xl')
-          if (row > after.row && col < before.col) cell.classList.add('rounded-bl-3xl')
-          if (row > after.row && col > before.col) cell.classList.add('rounded-br-3xl')
-        }
+            if (row < after.row && col < before.col) cell.classList.add('rounded-tl-3xl')
+            if (row < after.row && col > before.col) cell.classList.add('rounded-tr-3xl')
+            if (row > after.row && col < before.col) cell.classList.add('rounded-bl-3xl')
+            if (row > after.row && col > before.col) cell.classList.add('rounded-br-3xl')
+          }
+        })
       })
-    })
 
     // Color in where food is
     msg.foodLocations.forEach(coor => {
@@ -91,16 +96,17 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
   },
   lobby: (msg) => {
     console.log('rendering lobby', msg, msg.players[msg.uuid])
-    const boardElement = document.querySelector('#board');
-    if (!boardElement) throw Error('Cant find board element')
-    while (boardElement.firstChild) {
-      boardElement.removeChild(boardElement.firstChild)
-    }
+    // const boardElement = document.querySelector('#board');
+    // if (!boardElement) throw Error('Cant find board element')
+    // while (boardElement.firstChild) {
+    //   boardElement.removeChild(boardElement.firstChild)
+    // }
     // boardElement.appendChild(board({ boardSize: msg.boardSize }));
+    const boardElement = clearContainer('board');
+    clearContainer('leaderboard');
     const isReady = msg.players[msg.uuid].state === 'ready';
     boardElement.appendChild(
       t('div', { className: 'flex flex-col gap-8 items-center'}, [
-        t('div', { textContent: 'this is the lobby' }),
         t('div', { textContent: `Players ready: ${Object.values(msg.players).filter(player => player.state === 'ready').length} / ${Object.keys(msg.players).length}` }),
         t('div', { className: `p-4 flex justify-center items-center gap-4 bg-gray-200 rounded-xl border-2 border-black` }, [
           t('div', { textContent: 'Are you ready?' }),
@@ -109,7 +115,7 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
             className: `p-2 text-6xl transition-all duration-1000 border-2 rounded-xl ${isReady ? 'bg-green-300 text-green-500 border-green-500' : 'rotate-180 bg-red-300 text-red-500 border-red-500' }`,
             onclick: () => {
               console.log('send ready toggle msg to server')
-              ws?.send(JSON.stringify({ action: 'toggleReady' } satisfies ClientMsg<'toggleReady'>))
+              ws?.send(JSON.stringify({ action: 'toggleReady' } satisfies ClientMsg))
             }
           })
         ])
@@ -118,9 +124,23 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
   },
   done: (msg) => {
     renders.running(msg)
-    const leaderboard = document.querySelector('#leaderboard')!
+    const leaderboard = clearContainer('leaderboard')
+    // const leaderboard = document.querySelector('#leaderboard')!
+    const rematch = msg.players[msg.uuid].state === 'rematch';
     leaderboard.appendChild(
       t('div', { className: 'flex flex-col items-center gap-4' }, [
+        t('div', { textContent: `Players ready: ${Object.values(msg.players).filter(player => player.state === 'rematch').length} / ${Object.keys(msg.players).length}` }),
+        t('div', { className: `p-4 flex justify-center items-center gap-4 bg-gray-200 rounded-xl border-2 border-black` }, [
+          t('div', { textContent: 'Do you want a rematch?' }),
+          t('button', {
+            textContent: '🖒',
+            className: `p-2 text-6xl transition-all duration-1000 border-2 rounded-xl ${rematch ? 'bg-green-300 text-green-500 border-green-500' : 'rotate-180 bg-red-300 text-red-500 border-red-500' }`,
+            onclick: () => {
+              console.log('send ready toggle msg to server')
+              ws?.send(JSON.stringify({ action: 'toggleRematch' } satisfies ClientMsg))
+            }
+          })
+        ]),
         ...Object.values(msg.players)
         .filter(player => player.pos.length > 0)
         .sort((a, b) => b.pos.length - a.pos.length)
@@ -130,7 +150,8 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
             t('span', {
               textContent: player.username,
               className: `text-xl font-bold ${player.state === 'winner' ? 'text-yellow-500' :
-                player.state === 'gameover' ? 'text-red-500' : ''}`
+                player.state === 'gameover' ? 'text-red-500' : 
+                  player.state === 'rematch' ? 'text-green-500' : ''}`
             }),
             t('span', { textContent: player.pos.length.toString() }),
           ])
@@ -138,6 +159,15 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
       ])
     )
   }
+}
+
+function clearContainer(id: string) {
+  const element = document.querySelector(`#${id}`);
+  if (!element) throw Error('Cant find board element');
+  while (element.firstChild) {
+    element.removeChild(element.firstChild);
+  }
+  return element;
 }
 
 function invertHexColor(hex: string) {
@@ -236,11 +266,12 @@ document.body.append(
     ]),
     t('label', { className: 'flex justify-center items-center gap-4', textContent: 'Username' }, [
       t('input', {
+        className: 'border-2 border-black p-4',
         id: 'username',
         type: 'text',
         maxLength: '32',
         required: true,
-        className: 'border-2 border-black p-4'
+        value: [ ...Array(6).keys() ].map(() => String.fromCharCode(Math.floor(Math.random() * 57) + 65)).join('')
       })
     ]),
     t('label', { className: 'flex justify-center items-center gap-4', textContent: 'Game Code' }, [

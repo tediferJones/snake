@@ -1,9 +1,9 @@
-import type { ServerWebSocket } from 'bun';
 import type {
   Actions,
   ClientData,
   ClientGameData,
   ClientMsg,
+  ClientSocket,
   Coordinate,
   Directions,
   GameData,
@@ -15,7 +15,7 @@ export default class GamesManager {
   movements: { [key in Directions]: Coordinate<1 | 0 | -1> }
   defaultTickRate: number;
   defaultBoardSize: number;
-  actions: { [key in Actions]: (ws: ServerWebSocket<ClientData>, msg: ClientMsg<key>) => void }
+  actions: { [key in Actions]: (ws: ClientSocket, msg: ClientMsg<key>) => void }
 
   constructor() {
     this.allGames = {};
@@ -36,33 +36,44 @@ export default class GamesManager {
         ws.data.state = ws.data.state === 'ready' ? 'notReady' : 'ready'
         this.sendClientMsg(ws.data.gameCode)
 
-        const allReady = Object.values(this.allGames[ws.data.gameCode].players).every(player => player.data.state === 'ready')
-        if (allReady) {
+        
+        if (
+          Object.values(this.allGames[ws.data.gameCode].players).every(player => player.data.state === 'ready')
+        ) {
           this.startGame(ws.data.gameCode);
-          // Object.values(this.allGames[ws.data.gameCode].players).forEach(player => player.data.state = 'playing')
-          // this.allGames[ws.data.gameCode].gameState = 'running'
         }
+      },
+      toggleRematch: (ws, msg) => {
+        if (ws.data.state !== 'rematch') {
+          ws.data.oldState = ws.data.state;
+          ws.data.state = 'rematch';
+        } else {
+          if (!ws.data.oldState) throw Error('Cant find old state');
+          ws.data.state = ws.data.oldState;
+        }
+
+        const gameInfo = this.allGames[ws.data.gameCode]
+        if (
+          Object.values(gameInfo.players).every(player => player.data.state === 'rematch')
+        ) {
+          Object.values(gameInfo.players).forEach(player => player.data.state = 'notReady')
+          gameInfo.gameState = 'lobby'
+        }
+        this.sendClientMsg(ws.data.gameCode)
       }
     }
     this.defaultTickRate = 500;
     this.defaultBoardSize = 6;
   }
 
-  joinLobby(ws: ServerWebSocket<ClientData>) {
+  joinLobby(ws: ClientSocket) {
     const game = this.allGames[ws.data.gameCode];
     let uuid = crypto.randomUUID();
     if (game) {
       while (game.players[uuid]) uuid = crypto.randomUUID();
       game.players[uuid] = ws;
-      // game.foodLocations = game.foodLocations.concat(this.getOpenPositions(ws.data.gameCode, 1));
-      // game.boardSize = Math.floor(Math.sqrt((this.defaultBoardSize ** 2) * Object.keys(game.players).length + 1));
     } else {
       this.allGames[ws.data.gameCode] = {
-        // boardSize: this.defaultBoardSize,
-        // players: { [uuid]: ws },
-        // interval: setInterval(this.refreshGameState(ws.data.gameCode), this.defaultTickRate),
-        // foodLocations: [],
-        // gameState: 'lobby'
         boardSize: 0,
         players: { [uuid]: ws },
         interval: setInterval(this.refreshGameState(ws.data.gameCode), Number.MAX_SAFE_INTEGER),
@@ -75,9 +86,6 @@ export default class GamesManager {
     ws.data.uuid = uuid;
     ws.data.state = 'notReady';
     this.sendClientMsg(ws.data.gameCode)
-    // ws.data.pos = this.getOpenPositions(ws.data.gameCode, 1);
-    // ws.data.dir = this.getRandomDir();
-    // ws.send(JSON.stringify({ ...this.getClientMsg(ws.data.gameCode), uuid }));
     // console.log('OPENED', this.allGames)
   }
 
@@ -99,7 +107,7 @@ export default class GamesManager {
     this.sendClientMsg(gameCode);
   }
 
-  leaveLobby(ws: ServerWebSocket<ClientData>) {
+  leaveLobby(ws: ClientSocket) {
     const gameInfo = this.allGames[ws.data.gameCode];
     delete gameInfo.players[ws.data.uuid];
     gameInfo.foodLocations.shift();
@@ -108,10 +116,6 @@ export default class GamesManager {
       delete this.allGames[ws.data.gameCode];
     }
     // console.log('CLOSED', this.allGames)
-  }
-
-  handleClientMsg(ws: ServerWebSocket<ClientData>, msg: ClientMsg) {
-    this.actions[msg.action](ws, msg as any);
   }
 
   getRandomDir() {
@@ -176,8 +180,9 @@ export default class GamesManager {
         const { pos, dir } = player.data;
         const newRow = pos[0].row + this.movements[dir].row;
         const newCol = pos[0].col + this.movements[dir].col;
-        const usedPositions = Object.values(gameInfo.players)
-        .flatMap(player => player.data.state === 'playing' ? player.data.pos : []);
+        const usedPositions = Object.values(gameInfo.players).flatMap(
+          player => player.data.state === 'playing' ? player.data.pos : []
+        );
 
         if (
           // Check if player is out of bounds

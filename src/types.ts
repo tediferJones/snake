@@ -6,15 +6,17 @@ export type Coordinate<T = number> = {
 }
 
 export type Directions = 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight';
+export type PlayerState = 'notReady' | 'ready' | 'playing' | 'gameover' | 'winner' | 'rematch';
 
 export type ClientData = {
   gameCode: string,
   uuid: string,
   color: string,
-  state: 'notReady' | 'ready' | 'playing' | 'gameover' | 'winner',
+  state: PlayerState,
   pos: Coordinate[]
   dir: Directions,
   username: string,
+  oldState?: PlayerState,
 }
 
 export type ClientSocket = ServerWebSocket<ClientData>;
@@ -34,7 +36,7 @@ export type ClientGameData = Omit<GameData, 'interval' | 'players'> & {
 
 export type StrIdxObj<T> = { [key: string]: T }
 
-export type Actions = 'changeDir' | 'toggleReady'
+export type Actions = 'changeDir' | 'toggleReady' | 'toggleRematch'
 
 export type ClientMsg<T extends Actions = Actions> = {
   action: Actions,
@@ -45,4 +47,5 @@ type MsgTypes = {
     dir: Directions
   },
   toggleReady: {},
+  toggleRematch: {},
 }
