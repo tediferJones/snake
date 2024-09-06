@@ -6,7 +6,7 @@ export type Coordinate<T = number> = {
 }
 
 export type Directions = 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight';
-export type PlayerState = 'notReady' | 'ready' | 'playing' | 'gameover' | 'winner' | 'rematch';
+export type PlayerState = 'notReady' | 'ready' | 'playing' | 'gameOver' | 'winner' | 'rematch';
 
 export type ClientData = {
   gameCode: string,

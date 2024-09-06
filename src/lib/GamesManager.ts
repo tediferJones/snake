@@ -191,7 +191,7 @@ export default class GamesManager {
             // Check if newPos intersects with any player's existing pos
             usedPositions.find(pos => pos.row === newRow && pos.col === newCol)
         ) {
-          player.data.state = 'gameover';
+          player.data.state = 'gameOver';
           gameInfo.foodLocations.shift();
           return
         }

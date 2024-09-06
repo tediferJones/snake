@@ -2,6 +2,7 @@ import t from '@/lib/getTag';
 import board from '@/components/board';
 import onScreenControls from '@/components/onScreenControls';
 import type { ClientGameData, ClientMsg, Directions } from '@/types';
+import fromCamelCase from './lib/fromCamelCase';
 
 let ws: WebSocket | undefined;
 let lastMsg: ClientGameData | undefined;
@@ -25,16 +26,10 @@ const drawPlayerSet = new Set(['playing', 'winner'])
 const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData) => void } = {
   running: (msg) => {
     // Draw game board
-    // const boardElement = document.querySelector('#board');
-    // if (!boardElement) throw Error('Cant find board element')
-    // while (boardElement.firstChild) {
-    //   boardElement.removeChild(boardElement.firstChild)
-    // }
     const boardElement = clearContainer('board');
     boardElement.appendChild(board({ boardSize: msg.boardSize }));
 
     // Color in where the players are
-    // Object.values(msg.players).filter(player => player.state !== 'gameover').forEach(player => {
     Object.values(msg.players)
       .filter(player => drawPlayerSet.has(player.state) || drawPlayerSet.has(player.oldState!))
       .forEach(player => {
@@ -96,15 +91,9 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
   },
   lobby: (msg) => {
     console.log('rendering lobby', msg, msg.players[msg.uuid])
-    // const boardElement = document.querySelector('#board');
-    // if (!boardElement) throw Error('Cant find board element')
-    // while (boardElement.firstChild) {
-    //   boardElement.removeChild(boardElement.firstChild)
-    // }
-    // boardElement.appendChild(board({ boardSize: msg.boardSize }));
-    const boardElement = clearContainer('board');
-    clearContainer('leaderboard');
     const isReady = msg.players[msg.uuid].state === 'ready';
+    clearContainer('leaderboard');
+    const boardElement = clearContainer('board');
     boardElement.appendChild(
       t('div', { className: 'flex flex-col gap-8 items-center'}, [
         t('div', { textContent: `Players ready: ${Object.values(msg.players).filter(player => player.state === 'ready').length} / ${Object.keys(msg.players).length}` }),
@@ -124,9 +113,13 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
   },
   done: (msg) => {
     renders.running(msg)
-    const leaderboard = clearContainer('leaderboard')
-    // const leaderboard = document.querySelector('#leaderboard')!
     const rematch = msg.players[msg.uuid].state === 'rematch';
+    const leaderboard = clearContainer('leaderboard')
+    const highlightColor: { [key: string]: string } = {
+      winner: 'bg-yellow-500',
+      gameOver: 'bg-red-500',
+      rematch: 'bg-green-500',
+    }
     leaderboard.appendChild(
       t('div', { className: 'flex flex-col items-center gap-4' }, [
         t('div', { textContent: `Players ready: ${Object.values(msg.players).filter(player => player.state === 'rematch').length} / ${Object.keys(msg.players).length}` }),
@@ -145,13 +138,14 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
         .filter(player => player.pos.length > 0)
         .sort((a, b) => b.pos.length - a.pos.length)
         .map((player, i) => 
-          t('div', { className: 'flex gap-4' }, [
+          t('div', { className: `flex gap-4 items-center justify-between p-4 w-full ${highlightColor[player.state]}` }, [
             t('span', { textContent: `${i + 1}.)` }),
             t('span', {
               textContent: player.username,
-              className: `text-xl font-bold ${player.state === 'winner' ? 'text-yellow-500' :
-                player.state === 'gameover' ? 'text-red-500' : 
-                  player.state === 'rematch' ? 'text-green-500' : ''}`
+              className: `text-xl font-bold`
+              // ${player.state === 'winner' ? 'bg-yellow-500' :
+              //   player.state === 'gameOver' ? 'bg-red-500' : 
+              //     player.state === 'rematch' ? 'bg-green-500' : ''}`
             }),
             t('span', { textContent: player.pos.length.toString() }),
           ])
@@ -215,15 +209,17 @@ function submitFunc(e: SubmitEvent) {
   const color = (document.querySelector('#colorPicker') as HTMLInputElement).value.slice(1);
   const gameCode = (document.querySelector('#gameCode') as HTMLInputElement).value.toUpperCase();
   const username = (document.querySelector('#username') as HTMLInputElement).value;
-  const joinBtn = document.querySelector('#joinBtn')! as HTMLButtonElement;
+  document.querySelector('#connectForm')?.classList.add('hidden');
+  document.querySelector('#connectedInfo')?.classList.remove('hidden');
+  // const joinBtn = document.querySelector('#joinBtn')! as HTMLButtonElement;
   console.log(color);
-  if (ws) {
-    ws.close();
-    ws = undefined;
-    joinBtn.textContent = 'Join Game'
-    return
-  }
-  joinBtn.textContent = 'Disconnect'
+  // if (ws) {
+  //   ws.close();
+  //   ws = undefined;
+  //   joinBtn.textContent = 'Join Game'
+  //   return
+  // }
+  // joinBtn.textContent = 'Disconnect'
 
   ws = new WebSocket(`${protocol === 'http:' ? 'ws' : 'wss'}://${host}?gameCode=${gameCode || 'general'}&color=${color}&username=${username}`)
   ws.onmessage = (ws) => {
@@ -231,7 +227,7 @@ function submitFunc(e: SubmitEvent) {
     lastMsg = msg;
 
     // Update player status
-    document.querySelector('#gameOver')!.textContent = msg.players[msg.uuid].state
+    document.querySelector('#gameState')!.textContent = fromCamelCase(msg.players[msg.uuid].state)
     document.querySelector('#playerCount')!.textContent = `Player Count: ${Object.keys(msg.players).length.toString()}`
 
     // Select render function based on gameState
@@ -246,48 +242,66 @@ document.addEventListener('keydown', e => {
   }
 });
 
-document.body.className = 'flex flex-col justify-between max-h-screen';
+document.body.className = 'flex flex-col gap-8 justify-between max-h-screen w-screen';
 
 document.body.append(
-  t('form', { className: 'p-4 flex justify-between items-center border-b-2 flex-wrap', onsubmit: submitFunc }, [
-    t('button', {
-      textContent: 'Join General Lobby',
-      className: 'p-4 border-4 border-black',
-      id: 'joinBtn',
-      type: 'submit',
-    }),
-    t('label', { className: 'flex items-center gap-4', textContent: 'Pick you color:', htmlFor: 'colorPicker' }, [
-      t('input', {
-        id: 'colorPicker',
-        type: 'color',
-        // Generate a random hex string
-        value: '#' + [ ...Array(6).keys() ].map(() => Math.floor(Math.random() * 16).toString(16)).join('')
+  // t('div', { className: 'p-8 flex flex-col gap-8 justify-between items-center border-b-2 flex-wrap' }, [
+  t('div', { className: 'p-8 border-b-2 flex-wrap' }, [
+    t('form', { id: 'connectForm', className: 'flex flex-col justify-center items-center gap-8', onsubmit: submitFunc }, [
+      t('button', {
+        textContent: 'Join General Lobby',
+        className: 'p-4 border-4 border-black',
+        id: 'joinBtn',
+        type: 'submit',
       }),
+      t('label', { className: 'flex items-center gap-4', textContent: 'Pick you color:', htmlFor: 'colorPicker' }, [
+        t('input', {
+          id: 'colorPicker',
+          type: 'color',
+          // Generate a random hex string
+          value: '#' + [ ...Array(6).keys() ].map(() => Math.floor(Math.random() * 16).toString(16)).join('')
+        }),
+      ]),
+      t('label', { className: 'flex flex-wrap justify-center items-center gap-4', textContent: 'Username' }, [
+        t('input', {
+          className: 'border-2 border-black p-4',
+          id: 'username',
+          type: 'text',
+          maxLength: '32',
+          required: true,
+          value: [ ...Array(6).keys() ].map(() => String.fromCharCode(Math.floor(Math.random() * 57) + 65)).join(''),
+        })
+      ]),
+      t('label', { className: 'flex flex-wrap justify-center items-center gap-4', textContent: 'Game Code' }, [
+        t('input', {
+          id: 'gameCode',
+          className: 'border-2 border-black p-4',
+          type: 'text',
+          minLength: '5',
+          maxLength: '5',
+          required: false,
+          placeholder: 'Leave blank to enter general lobby'
+        }),
+      ]),
     ]),
-    t('label', { className: 'flex justify-center items-center gap-4', textContent: 'Username' }, [
-      t('input', {
-        className: 'border-2 border-black p-4',
-        id: 'username',
-        type: 'text',
-        maxLength: '32',
-        required: true,
-        value: [ ...Array(6).keys() ].map(() => String.fromCharCode(Math.floor(Math.random() * 57) + 65)).join('')
-      })
-    ]),
-    t('label', { className: 'flex justify-center items-center gap-4', textContent: 'Game Code' }, [
-      t('input', {
-        id: 'gameCode',
-        className: 'border-2 border-black p-4',
-        type: 'text',
-        minLength: '5',
-        maxLength: '5',
-        required: false,
+    t('div', { id: 'connectedInfo', className: 'flex justify-center items-center gap-8 hidden' }, [
+      t('button', {
+        // id: 'disconnect',
+        textContent: 'Disconnect',
+        className: 'border-2 border-black p-4 rounded-xl',
+        onclick: () => {
+          ws?.close();
+          ws = undefined;
+          clearContainer('board')
+          document.querySelector('#connectedInfo')?.classList.add('hidden');
+          document.querySelector('#connectForm')?.classList.remove('hidden');
+        }
       }),
-    ]),
-    t('span', { id: 'gameOver' }),
-    t('span', { id: 'playerCount' }),
+      t('span', { id: 'gameState' }),
+      t('span', { id: 'playerCount' }),
+    ])
   ]),
   t('div', { id: 'board', className: 'aspect-square flex justify-center items-center' }),
-  t('div', { id: 'leaderboard' }),
+  t('div', { id: 'leaderboard', className: 'w-min mx-auto py-8' }),
   onScreenControls({ changeDirFunc: changeDirection })
 );

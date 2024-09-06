@@ -10,7 +10,7 @@ function getTag(type, props, children) {
 
 // src/components/board.ts
 function board({ boardSize }) {
-  return getTag("div", { className: "w-full m-8 border-4 border-black flex flex-col bg-gray-200" }, [...Array(boardSize).keys()].map((row) => {
+  return getTag("div", { className: "w-full mx-8 border-4 border-black flex flex-col bg-gray-200" }, [...Array(boardSize).keys()].map((row) => {
     return getTag("div", { className: "flex flex-1" }, [...Array(boardSize).keys()].map((col) => {
       return getTag("div", {
         id: `cell-${row}-${col}`,
@@ -33,6 +33,17 @@ function onScreenControls({ changeDirFunc }) {
     getTag("div", { className: "aspect-square text-7xl", textContent: "\u2B07", onclick: () => changeDirFunc("ArrowDown") }),
     getTag("div")
   ]);
+}
+
+// src/lib/fromCamelCase.ts
+function fromCamelCase(str, isPlural) {
+  return str.split("").reduce((str2, char, i) => {
+    if (i === 0)
+      return char.toUpperCase();
+    if ("A" <= char && char <= "Z")
+      return `${str2} ${char}`;
+    return str2 + char;
+  }, "") + (isPlural ? "s" : "");
 }
 
 // src/client.ts
@@ -82,20 +93,14 @@ var submitFunc = function(e) {
   const color = document.querySelector("#colorPicker").value.slice(1);
   const gameCode = document.querySelector("#gameCode").value.toUpperCase();
   const username = document.querySelector("#username").value;
-  const joinBtn = document.querySelector("#joinBtn");
+  document.querySelector("#connectForm")?.classList.add("hidden");
+  document.querySelector("#connectedInfo")?.classList.remove("hidden");
   console.log(color);
-  if (ws) {
-    ws.close();
-    ws = undefined;
-    joinBtn.textContent = "Join Game";
-    return;
-  }
-  joinBtn.textContent = "Disconnect";
   ws = new WebSocket(`${protocol === "http:" ? "ws" : "wss"}://${host}?gameCode=${gameCode || "general"}&color=${color}&username=${username}`);
   ws.onmessage = (ws) => {
     const msg = JSON.parse(ws.data);
     lastMsg = msg;
-    document.querySelector("#gameOver").textContent = msg.players[msg.uuid].state;
+    document.querySelector("#gameState").textContent = fromCamelCase(msg.players[msg.uuid].state);
     document.querySelector("#playerCount").textContent = `Player Count: ${Object.keys(msg.players).length.toString()}`;
     renders[msg.gameState](msg);
   };
@@ -183,9 +188,9 @@ var renders = {
   },
   lobby: (msg) => {
     console.log("rendering lobby", msg, msg.players[msg.uuid]);
-    const boardElement = clearContainer("board");
-    clearContainer("leaderboard");
     const isReady = msg.players[msg.uuid].state === "ready";
+    clearContainer("leaderboard");
+    const boardElement = clearContainer("board");
     boardElement.appendChild(getTag("div", { className: "flex flex-col gap-8 items-center" }, [
       getTag("div", { textContent: `Players ready: ${Object.values(msg.players).filter((player) => player.state === "ready").length} / ${Object.keys(msg.players).length}` }),
       getTag("div", { className: `p-4 flex justify-center items-center gap-4 bg-gray-200 rounded-xl border-2 border-black` }, [
@@ -203,8 +208,13 @@ var renders = {
   },
   done: (msg) => {
     renders.running(msg);
-    const leaderboard = clearContainer("leaderboard");
     const rematch = msg.players[msg.uuid].state === "rematch";
+    const leaderboard = clearContainer("leaderboard");
+    const highlightColor = {
+      winner: "bg-yellow-500",
+      gameOver: "bg-red-500",
+      rematch: "bg-green-500"
+    };
     leaderboard.appendChild(getTag("div", { className: "flex flex-col items-center gap-4" }, [
       getTag("div", { textContent: `Players ready: ${Object.values(msg.players).filter((player) => player.state === "rematch").length} / ${Object.keys(msg.players).length}` }),
       getTag("div", { className: `p-4 flex justify-center items-center gap-4 bg-gray-200 rounded-xl border-2 border-black` }, [
@@ -218,11 +228,11 @@ var renders = {
           }
         })
       ]),
-      ...Object.values(msg.players).filter((player) => player.pos.length > 0).sort((a, b) => b.pos.length - a.pos.length).map((player, i) => getTag("div", { className: "flex gap-4" }, [
+      ...Object.values(msg.players).filter((player) => player.pos.length > 0).sort((a, b) => b.pos.length - a.pos.length).map((player, i) => getTag("div", { className: `flex gap-4 items-center justify-between p-4 w-full ${highlightColor[player.state]}` }, [
         getTag("span", { textContent: `${i + 1}.)` }),
         getTag("span", {
           textContent: player.username,
-          className: `text-xl font-bold ${player.state === "winner" ? "text-yellow-500" : player.state === "gameover" ? "text-red-500" : player.state === "rematch" ? "text-green-500" : ""}`
+          className: `text-xl font-bold`
         }),
         getTag("span", { textContent: player.pos.length.toString() })
       ]))
@@ -235,41 +245,57 @@ document.addEventListener("keydown", (e) => {
     changeDirection(e.key);
   }
 });
-document.body.className = "flex flex-col justify-between max-h-screen";
-document.body.append(getTag("form", { className: "p-4 flex justify-between items-center border-b-2 flex-wrap", onsubmit: submitFunc }, [
-  getTag("button", {
-    textContent: "Join General Lobby",
-    className: "p-4 border-4 border-black",
-    id: "joinBtn",
-    type: "submit"
-  }),
-  getTag("label", { className: "flex items-center gap-4", textContent: "Pick you color:", htmlFor: "colorPicker" }, [
-    getTag("input", {
-      id: "colorPicker",
-      type: "color",
-      value: "#" + [...Array(6).keys()].map(() => Math.floor(Math.random() * 16).toString(16)).join("")
-    })
+document.body.className = "flex flex-col gap-8 justify-between max-h-screen w-screen";
+document.body.append(getTag("div", { className: "p-8 border-b-2 flex-wrap" }, [
+  getTag("form", { id: "connectForm", className: "flex flex-col justify-center items-center gap-8", onsubmit: submitFunc }, [
+    getTag("button", {
+      textContent: "Join General Lobby",
+      className: "p-4 border-4 border-black",
+      id: "joinBtn",
+      type: "submit"
+    }),
+    getTag("label", { className: "flex items-center gap-4", textContent: "Pick you color:", htmlFor: "colorPicker" }, [
+      getTag("input", {
+        id: "colorPicker",
+        type: "color",
+        value: "#" + [...Array(6).keys()].map(() => Math.floor(Math.random() * 16).toString(16)).join("")
+      })
+    ]),
+    getTag("label", { className: "flex flex-wrap justify-center items-center gap-4", textContent: "Username" }, [
+      getTag("input", {
+        className: "border-2 border-black p-4",
+        id: "username",
+        type: "text",
+        maxLength: "32",
+        required: true,
+        value: [...Array(6).keys()].map(() => String.fromCharCode(Math.floor(Math.random() * 57) + 65)).join("")
+      })
+    ]),
+    getTag("label", { className: "flex flex-wrap justify-center items-center gap-4", textContent: "Game Code" }, [
+      getTag("input", {
+        id: "gameCode",
+        className: "border-2 border-black p-4",
+        type: "text",
+        minLength: "5",
+        maxLength: "5",
+        required: false,
+        placeholder: "Leave blank to enter general lobby"
+      })
+    ])
   ]),
-  getTag("label", { className: "flex justify-center items-center gap-4", textContent: "Username" }, [
-    getTag("input", {
-      className: "border-2 border-black p-4",
-      id: "username",
-      type: "text",
-      maxLength: "32",
-      required: true,
-      value: [...Array(6).keys()].map(() => String.fromCharCode(Math.floor(Math.random() * 57) + 65)).join("")
-    })
-  ]),
-  getTag("label", { className: "flex justify-center items-center gap-4", textContent: "Game Code" }, [
-    getTag("input", {
-      id: "gameCode",
-      className: "border-2 border-black p-4",
-      type: "text",
-      minLength: "5",
-      maxLength: "5",
-      required: false
-    })
-  ]),
-  getTag("span", { id: "gameOver" }),
-  getTag("span", { id: "playerCount" })
-]), getTag("div", { id: "board", className: "aspect-square flex justify-center items-center" }), getTag("div", { id: "leaderboard" }), onScreenControls({ changeDirFunc: changeDirection }));
+  getTag("div", { id: "connectedInfo", className: "flex justify-center items-center gap-8 hidden" }, [
+    getTag("button", {
+      textContent: "Disconnect",
+      className: "border-2 border-black p-4 rounded-xl",
+      onclick: () => {
+        ws?.close();
+        ws = undefined;
+        clearContainer("board");
+        document.querySelector("#connectedInfo")?.classList.add("hidden");
+        document.querySelector("#connectForm")?.classList.remove("hidden");
+      }
+    }),
+    getTag("span", { id: "gameState" }),
+    getTag("span", { id: "playerCount" })
+  ])
+]), getTag("div", { id: "board", className: "aspect-square flex justify-center items-center" }), getTag("div", { id: "leaderboard", className: "w-min mx-auto py-8" }), onScreenControls({ changeDirFunc: changeDirection }));
