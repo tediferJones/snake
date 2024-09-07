@@ -8,21 +8,9 @@ function getTag(type, props, children) {
   return node;
 }
 
-// src/components/board.ts
-function board({ boardSize }) {
-  return getTag("div", { className: "w-full mx-8 border-4 border-black flex flex-col bg-gray-200" }, [...Array(boardSize).keys()].map((row) => {
-    return getTag("div", { className: "flex flex-1" }, [...Array(boardSize).keys()].map((col) => {
-      return getTag("div", {
-        id: `cell-${row}-${col}`,
-        className: `aspect-square flex-1 flex justify-center items-center border-[1px] border-gray-300`
-      });
-    }));
-  }));
-}
-
 // src/components/onScreenControls.ts
 function onScreenControls({ changeDirFunc }) {
-  return getTag("div", { className: "grid grid-cols-3 mx-auto" }, [
+  return getTag("div", { id: "onScreenControls", className: "grid grid-cols-3 mx-auto hidden" }, [
     getTag("div"),
     getTag("div", { className: "aspect-square text-7xl", textContent: "\u2B06", onclick: () => changeDirFunc("ArrowUp") }),
     getTag("div"),
@@ -33,6 +21,18 @@ function onScreenControls({ changeDirFunc }) {
     getTag("div", { className: "aspect-square text-7xl", textContent: "\u2B07", onclick: () => changeDirFunc("ArrowDown") }),
     getTag("div")
   ]);
+}
+
+// src/components/board.ts
+function board({ boardSize }) {
+  return getTag("div", { className: "w-full mx-8 border-4 border-black flex flex-col bg-gray-200" }, [...Array(boardSize).keys()].map((row) => {
+    return getTag("div", { className: "flex flex-1" }, [...Array(boardSize).keys()].map((col) => {
+      return getTag("div", {
+        id: `cell-${row}-${col}`,
+        className: `aspect-square flex-1 flex justify-center items-center border-[1px] border-gray-300`
+      });
+    }));
+  }));
 }
 
 // src/lib/fromCamelCase.ts
@@ -95,6 +95,7 @@ var submitFunc = function(e) {
   const username = document.querySelector("#username").value;
   document.querySelector("#connectForm")?.classList.add("hidden");
   document.querySelector("#connectedInfo")?.classList.remove("hidden");
+  document.querySelector("#onScreenControls")?.classList.remove("hidden");
   console.log(color);
   ws = new WebSocket(`${protocol === "http:" ? "ws" : "wss"}://${host}?gameCode=${gameCode || "general"}&color=${color}&username=${username}`);
   ws.onmessage = (ws) => {
@@ -245,15 +246,9 @@ document.addEventListener("keydown", (e) => {
     changeDirection(e.key);
   }
 });
-document.body.className = "flex flex-col gap-8 justify-between max-h-screen w-screen";
+document.body.className = "flex flex-col gap-8 justify-between max-h-screen max-w-screen";
 document.body.append(getTag("div", { className: "p-8 border-b-2 flex-wrap" }, [
   getTag("form", { id: "connectForm", className: "flex flex-col justify-center items-center gap-8", onsubmit: submitFunc }, [
-    getTag("button", {
-      textContent: "Join General Lobby",
-      className: "p-4 border-4 border-black",
-      id: "joinBtn",
-      type: "submit"
-    }),
     getTag("label", { className: "flex items-center gap-4", textContent: "Pick you color:", htmlFor: "colorPicker" }, [
       getTag("input", {
         id: "colorPicker",
@@ -263,7 +258,7 @@ document.body.append(getTag("div", { className: "p-8 border-b-2 flex-wrap" }, [
     ]),
     getTag("label", { className: "flex flex-wrap justify-center items-center gap-4", textContent: "Username" }, [
       getTag("input", {
-        className: "border-2 border-black p-4",
+        className: "border-2 border-black p-4 rounded-xl",
         id: "username",
         type: "text",
         maxLength: "32",
@@ -274,14 +269,20 @@ document.body.append(getTag("div", { className: "p-8 border-b-2 flex-wrap" }, [
     getTag("label", { className: "flex flex-wrap justify-center items-center gap-4", textContent: "Game Code" }, [
       getTag("input", {
         id: "gameCode",
-        className: "border-2 border-black p-4",
+        className: "border-2 border-black p-4 rounded-xl",
         type: "text",
         minLength: "5",
         maxLength: "5",
         required: false,
         placeholder: "Leave blank to enter general lobby"
       })
-    ])
+    ]),
+    getTag("button", {
+      textContent: "Join General Lobby",
+      className: "p-4 border-2 border-black rounded-xl",
+      id: "joinBtn",
+      type: "submit"
+    })
   ]),
   getTag("div", { id: "connectedInfo", className: "flex justify-center items-center gap-8 hidden" }, [
     getTag("button", {
@@ -293,9 +294,10 @@ document.body.append(getTag("div", { className: "p-8 border-b-2 flex-wrap" }, [
         clearContainer("board");
         document.querySelector("#connectedInfo")?.classList.add("hidden");
         document.querySelector("#connectForm")?.classList.remove("hidden");
+        document.querySelector("#onScreenControls")?.classList.add("hidden");
       }
     }),
     getTag("span", { id: "gameState" }),
     getTag("span", { id: "playerCount" })
   ])
-]), getTag("div", { id: "board", className: "aspect-square flex justify-center items-center" }), getTag("div", { id: "leaderboard", className: "w-min mx-auto py-8" }), onScreenControls({ changeDirFunc: changeDirection }));
+]), getTag("div", { id: "board", className: "aspect-square flex justify-center items-center" }), getTag("div", { id: "leaderboard", className: "w-min mx-auto" }), onScreenControls({ changeDirFunc: changeDirection }));

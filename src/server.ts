@@ -15,7 +15,7 @@ const GamesMan = new GamesManager();
 Bun.serve<ClientData>({
   fetch: async (req, server) => {
     let { pathname, searchParams } = new URL(req.url);
-    // console.log(req.url)
+    console.log(req.url)
     if (server.upgrade(req, { data: {
       gameCode: searchParams.get('gameCode'),
       color: searchParams.get('color'),
@@ -23,7 +23,6 @@ Bun.serve<ClientData>({
     } })) return
 
     if (pathname === '/') pathname = '/index.html';
-    // console.log(pathname);
     const file = Bun.file('public' + pathname);
     const exists = await file.exists();
     return new Response(

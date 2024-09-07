@@ -1,8 +1,8 @@
-import t from '@/lib/getTag';
-import board from '@/components/board';
-import onScreenControls from '@/components/onScreenControls';
 import type { ClientGameData, ClientMsg, Directions } from '@/types';
-import fromCamelCase from './lib/fromCamelCase';
+import onScreenControls from '@/components/onScreenControls';
+import board from '@/components/board';
+import fromCamelCase from '@/lib/fromCamelCase';
+import t from '@/lib/getTag';
 
 let ws: WebSocket | undefined;
 let lastMsg: ClientGameData | undefined;
@@ -211,49 +211,36 @@ function submitFunc(e: SubmitEvent) {
   const username = (document.querySelector('#username') as HTMLInputElement).value;
   document.querySelector('#connectForm')?.classList.add('hidden');
   document.querySelector('#connectedInfo')?.classList.remove('hidden');
-  // const joinBtn = document.querySelector('#joinBtn')! as HTMLButtonElement;
+  document.querySelector('#onScreenControls')?.classList.remove('hidden');
   console.log(color);
-  // if (ws) {
-  //   ws.close();
-  //   ws = undefined;
-  //   joinBtn.textContent = 'Join Game'
-  //   return
-  // }
-  // joinBtn.textContent = 'Disconnect'
 
   ws = new WebSocket(`${protocol === 'http:' ? 'ws' : 'wss'}://${host}?gameCode=${gameCode || 'general'}&color=${color}&username=${username}`)
   ws.onmessage = (ws) => {
-    const msg: ClientGameData = JSON.parse(ws.data)
+    const msg: ClientGameData = JSON.parse(ws.data);
     lastMsg = msg;
 
     // Update player status
-    document.querySelector('#gameState')!.textContent = fromCamelCase(msg.players[msg.uuid].state)
-    document.querySelector('#playerCount')!.textContent = `Player Count: ${Object.keys(msg.players).length.toString()}`
+    document.querySelector('#gameState')!.textContent = fromCamelCase(msg.players[msg.uuid].state);
+    document.querySelector('#playerCount')!.textContent = `Player Count: ${Object.keys(msg.players).length.toString()}`;
 
     // Select render function based on gameState
-    renders[msg.gameState](msg)
+    renders[msg.gameState](msg);
   }
 }
 
 document.addEventListener('keydown', e => {
   console.log(e.key, lastMsg)
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-    changeDirection(e.key as Directions)
+    changeDirection(e.key as Directions);
   }
 });
 
-document.body.className = 'flex flex-col gap-8 justify-between max-h-screen w-screen';
+document.body.className = 'flex flex-col gap-8 justify-between max-h-screen max-w-screen';
 
 document.body.append(
   // t('div', { className: 'p-8 flex flex-col gap-8 justify-between items-center border-b-2 flex-wrap' }, [
   t('div', { className: 'p-8 border-b-2 flex-wrap' }, [
     t('form', { id: 'connectForm', className: 'flex flex-col justify-center items-center gap-8', onsubmit: submitFunc }, [
-      t('button', {
-        textContent: 'Join General Lobby',
-        className: 'p-4 border-4 border-black',
-        id: 'joinBtn',
-        type: 'submit',
-      }),
       t('label', { className: 'flex items-center gap-4', textContent: 'Pick you color:', htmlFor: 'colorPicker' }, [
         t('input', {
           id: 'colorPicker',
@@ -264,7 +251,7 @@ document.body.append(
       ]),
       t('label', { className: 'flex flex-wrap justify-center items-center gap-4', textContent: 'Username' }, [
         t('input', {
-          className: 'border-2 border-black p-4',
+          className: 'border-2 border-black p-4 rounded-xl',
           id: 'username',
           type: 'text',
           maxLength: '32',
@@ -275,7 +262,7 @@ document.body.append(
       t('label', { className: 'flex flex-wrap justify-center items-center gap-4', textContent: 'Game Code' }, [
         t('input', {
           id: 'gameCode',
-          className: 'border-2 border-black p-4',
+          className: 'border-2 border-black p-4 rounded-xl',
           type: 'text',
           minLength: '5',
           maxLength: '5',
@@ -283,6 +270,12 @@ document.body.append(
           placeholder: 'Leave blank to enter general lobby'
         }),
       ]),
+      t('button', {
+        textContent: 'Join General Lobby',
+        className: 'p-4 border-2 border-black rounded-xl',
+        id: 'joinBtn',
+        type: 'submit',
+      }),
     ]),
     t('div', { id: 'connectedInfo', className: 'flex justify-center items-center gap-8 hidden' }, [
       t('button', {
@@ -292,16 +285,18 @@ document.body.append(
         onclick: () => {
           ws?.close();
           ws = undefined;
-          clearContainer('board')
+          clearContainer('board');
           document.querySelector('#connectedInfo')?.classList.add('hidden');
           document.querySelector('#connectForm')?.classList.remove('hidden');
+          document.querySelector('#onScreenControls')?.classList.add('hidden');
         }
       }),
       t('span', { id: 'gameState' }),
       t('span', { id: 'playerCount' }),
-    ])
+    ]),
+    // t('div', { className: 'w-0 h-0 border-l-[50px] border-r-[50px] border-b-[100px] border-transparent border-b-blue-500' }),
   ]),
   t('div', { id: 'board', className: 'aspect-square flex justify-center items-center' }),
-  t('div', { id: 'leaderboard', className: 'w-min mx-auto py-8' }),
+  t('div', { id: 'leaderboard', className: 'w-min mx-auto' }),
   onScreenControls({ changeDirFunc: changeDirection })
 );
