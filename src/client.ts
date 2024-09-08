@@ -25,6 +25,7 @@ const drawPlayerSet = new Set(['playing', 'winner'])
 
 const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData) => void } = {
   running: (msg) => {
+    document.querySelector('#onScreenControls')?.classList.remove('hidden');
     // Draw game board
     const boardElement = clearContainer('board');
     boardElement.appendChild(board({ boardSize: msg.boardSize }));
@@ -114,7 +115,8 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
   done: (msg) => {
     renders.running(msg)
     const rematch = msg.players[msg.uuid].state === 'rematch';
-    const leaderboard = clearContainer('leaderboard')
+    const leaderboard = clearContainer('leaderboard');
+    document.querySelector('#onScreenControls')?.classList.add('hidden');
     const highlightColor: { [key: string]: string } = {
       winner: 'bg-yellow-500',
       gameOver: 'bg-red-500',
@@ -140,13 +142,7 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
         .map((player, i) => 
           t('div', { className: `flex gap-4 items-center justify-between p-4 w-full ${highlightColor[player.state]}` }, [
             t('span', { textContent: `${i + 1}.)` }),
-            t('span', {
-              textContent: player.username,
-              className: `text-xl font-bold`
-              // ${player.state === 'winner' ? 'bg-yellow-500' :
-              //   player.state === 'gameOver' ? 'bg-red-500' : 
-              //     player.state === 'rematch' ? 'bg-green-500' : ''}`
-            }),
+            t('span', { textContent: player.username, className: `text-xl font-bold` }),
             t('span', { textContent: player.pos.length.toString() }),
           ])
         )
@@ -211,7 +207,7 @@ function submitFunc(e: SubmitEvent) {
   const username = (document.querySelector('#username') as HTMLInputElement).value;
   document.querySelector('#connectForm')?.classList.add('hidden');
   document.querySelector('#connectedInfo')?.classList.remove('hidden');
-  document.querySelector('#onScreenControls')?.classList.remove('hidden');
+  // document.querySelector('#onScreenControls')?.classList.remove('hidden');
   console.log(color);
 
   ws = new WebSocket(`${protocol === 'http:' ? 'ws' : 'wss'}://${host}?gameCode=${gameCode || 'general'}&color=${color}&username=${username}`)
@@ -235,7 +231,7 @@ document.addEventListener('keydown', e => {
   }
 });
 
-document.body.className = 'flex flex-col gap-8 justify-between max-h-screen max-w-screen';
+document.body.className = 'flex flex-col gap-8 justify-between max-w-screen';
 
 document.body.append(
   // t('div', { className: 'p-8 flex flex-col gap-8 justify-between items-center border-b-2 flex-wrap' }, [
@@ -296,7 +292,7 @@ document.body.append(
     ]),
     // t('div', { className: 'w-0 h-0 border-l-[50px] border-r-[50px] border-b-[100px] border-transparent border-b-blue-500' }),
   ]),
-  t('div', { id: 'board', className: 'aspect-square flex justify-center items-center' }),
-  t('div', { id: 'leaderboard', className: 'w-min mx-auto' }),
-  onScreenControls({ changeDirFunc: changeDirection })
+  t('div', { id: 'board', className: 'flex justify-center items-center' }),
+  onScreenControls({ changeDirFunc: changeDirection }),
+  t('div', { id: 'leaderboard', className: 'w-min mx-auto mb-8' }),
 );

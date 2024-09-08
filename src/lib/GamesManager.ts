@@ -18,6 +18,8 @@ export default class GamesManager {
   actions: { [key in Actions]: (ws: ClientSocket, msg: ClientMsg<key>) => void }
 
   constructor() {
+    this.defaultTickRate = 500;
+    this.defaultBoardSize = 6;
     this.allGames = {};
     this.movements = {
       'ArrowUp':    { row: -1, col: 0 },
@@ -62,8 +64,6 @@ export default class GamesManager {
         this.sendClientMsg(ws.data.gameCode)
       }
     }
-    this.defaultTickRate = 500;
-    this.defaultBoardSize = 6;
   }
 
   joinLobby(ws: ClientSocket) {

@@ -10,16 +10,33 @@ function getTag(type, props, children) {
 
 // src/components/onScreenControls.ts
 function onScreenControls({ changeDirFunc }) {
-  return getTag("div", { id: "onScreenControls", className: "grid grid-cols-3 mx-auto hidden" }, [
-    getTag("div"),
-    getTag("div", { className: "aspect-square text-7xl", textContent: "\u2B06", onclick: () => changeDirFunc("ArrowUp") }),
-    getTag("div"),
-    getTag("div", { className: "aspect-square text-7xl", textContent: "\u2B05", onclick: () => changeDirFunc("ArrowLeft") }),
-    getTag("div"),
-    getTag("div", { className: "aspect-square text-7xl", textContent: "\u27A1", onclick: () => changeDirFunc("ArrowRight") }),
-    getTag("div"),
-    getTag("div", { className: "aspect-square text-7xl", textContent: "\u2B07", onclick: () => changeDirFunc("ArrowDown") }),
-    getTag("div")
+  return getTag("div", { id: "onScreenControls", className: "mx-auto aspect-square w-3/4 flex justify-center items-center" }, [
+    getTag("div", { className: "aspect-square w-3/4 grid grid-cols-2 mx-auto rotate-45" }, [
+      getTag("div", {
+        className: "aspect-square bg-black m-2 flex justify-center items-center",
+        onclick: () => changeDirFunc("ArrowUp")
+      }, [
+        getTag("div", { className: "mb-8 mr-8 -rotate-45 w-0 h-0 border-l-[50px] border-r-[50px] border-b-[75px] border-transparent border-b-white" })
+      ]),
+      getTag("div", {
+        className: "aspect-square bg-black m-2 flex justify-center items-center",
+        onclick: () => changeDirFunc("ArrowRight")
+      }, [
+        getTag("div", { className: "mb-8 ml-8 rotate-45 w-0 h-0 border-l-[50px] border-r-[50px] border-b-[75px] border-transparent border-b-white" })
+      ]),
+      getTag("div", {
+        className: "aspect-square bg-black m-2 flex justify-center items-center",
+        onclick: () => changeDirFunc("ArrowLeft")
+      }, [
+        getTag("div", { className: "mt-8 mr-8 rotate-45 w-0 h-0 border-l-[50px] border-r-[50px] border-t-[75px] border-transparent border-t-white" })
+      ]),
+      getTag("div", {
+        className: "aspect-square bg-black m-2 flex justify-center items-center",
+        onclick: () => changeDirFunc("ArrowDown")
+      }, [
+        getTag("div", { className: "mt-8 ml-8 -rotate-45 w-0 h-0 border-l-[50px] border-r-[50px] border-t-[75px] border-transparent border-t-white" })
+      ])
+    ])
   ]);
 }
 
@@ -95,7 +112,6 @@ var submitFunc = function(e) {
   const username = document.querySelector("#username").value;
   document.querySelector("#connectForm")?.classList.add("hidden");
   document.querySelector("#connectedInfo")?.classList.remove("hidden");
-  document.querySelector("#onScreenControls")?.classList.remove("hidden");
   console.log(color);
   ws = new WebSocket(`${protocol === "http:" ? "ws" : "wss"}://${host}?gameCode=${gameCode || "general"}&color=${color}&username=${username}`);
   ws.onmessage = (ws) => {
@@ -123,6 +139,7 @@ var roundingDir = {
 var drawPlayerSet = new Set(["playing", "winner"]);
 var renders = {
   running: (msg) => {
+    document.querySelector("#onScreenControls")?.classList.remove("hidden");
     const boardElement = clearContainer("board");
     boardElement.appendChild(board({ boardSize: msg.boardSize }));
     Object.values(msg.players).filter((player) => drawPlayerSet.has(player.state) || drawPlayerSet.has(player.oldState)).forEach((player) => {
@@ -211,6 +228,7 @@ var renders = {
     renders.running(msg);
     const rematch = msg.players[msg.uuid].state === "rematch";
     const leaderboard = clearContainer("leaderboard");
+    document.querySelector("#onScreenControls")?.classList.add("hidden");
     const highlightColor = {
       winner: "bg-yellow-500",
       gameOver: "bg-red-500",
@@ -231,10 +249,7 @@ var renders = {
       ]),
       ...Object.values(msg.players).filter((player) => player.pos.length > 0).sort((a, b) => b.pos.length - a.pos.length).map((player, i) => getTag("div", { className: `flex gap-4 items-center justify-between p-4 w-full ${highlightColor[player.state]}` }, [
         getTag("span", { textContent: `${i + 1}.)` }),
-        getTag("span", {
-          textContent: player.username,
-          className: `text-xl font-bold`
-        }),
+        getTag("span", { textContent: player.username, className: `text-xl font-bold` }),
         getTag("span", { textContent: player.pos.length.toString() })
       ]))
     ]));
@@ -246,7 +261,7 @@ document.addEventListener("keydown", (e) => {
     changeDirection(e.key);
   }
 });
-document.body.className = "flex flex-col gap-8 justify-between max-h-screen max-w-screen";
+document.body.className = "flex flex-col gap-8 justify-between max-w-screen";
 document.body.append(getTag("div", { className: "p-8 border-b-2 flex-wrap" }, [
   getTag("form", { id: "connectForm", className: "flex flex-col justify-center items-center gap-8", onsubmit: submitFunc }, [
     getTag("label", { className: "flex items-center gap-4", textContent: "Pick you color:", htmlFor: "colorPicker" }, [
@@ -300,4 +315,4 @@ document.body.append(getTag("div", { className: "p-8 border-b-2 flex-wrap" }, [
     getTag("span", { id: "gameState" }),
     getTag("span", { id: "playerCount" })
   ])
-]), getTag("div", { id: "board", className: "aspect-square flex justify-center items-center" }), getTag("div", { id: "leaderboard", className: "w-min mx-auto" }), onScreenControls({ changeDirFunc: changeDirection }));
+]), getTag("div", { id: "board", className: "flex justify-center items-center" }), onScreenControls({ changeDirFunc: changeDirection }), getTag("div", { id: "leaderboard", className: "w-min mx-auto mb-8" }));
