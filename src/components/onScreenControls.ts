@@ -7,25 +7,25 @@ export default function onScreenControls({ changeDirFunc }: { changeDirFunc: Fun
         className: 'aspect-square bg-black m-2 flex justify-center items-center',
         onclick: () => changeDirFunc('ArrowUp')
       }, [
-          t('div', { className: 'mb-8 mr-8 -rotate-45 w-0 h-0 border-l-[50px] border-r-[50px] border-b-[75px] border-transparent border-b-white' }),
+          // t('div', { className: 'mb-8 mr-8 -rotate-45 w-0 h-0 border-l-[50px] border-r-[50px] border-b-[75px] border-transparent border-b-white' }),
         ]),
       t('div', {
         className: 'aspect-square bg-black m-2 flex justify-center items-center',
         onclick: () => changeDirFunc('ArrowRight')
       }, [
-          t('div', { className: 'mb-8 ml-8 rotate-45 w-0 h-0 border-l-[50px] border-r-[50px] border-b-[75px] border-transparent border-b-white' }),
+          // t('div', { className: 'mb-8 ml-8 rotate-45 w-0 h-0 border-l-[50px] border-r-[50px] border-b-[75px] border-transparent border-b-white' }),
         ]),
       t('div', {
         className: 'aspect-square bg-black m-2 flex justify-center items-center',
         onclick: () => changeDirFunc('ArrowLeft')
       }, [
-          t('div', { className: 'mt-8 mr-8 rotate-45 w-0 h-0 border-l-[50px] border-r-[50px] border-t-[75px] border-transparent border-t-white' }),
+          // t('div', { className: 'mt-8 mr-8 rotate-45 w-0 h-0 border-l-[50px] border-r-[50px] border-t-[75px] border-transparent border-t-white' }),
         ]),
       t('div', {
         className: 'aspect-square bg-black m-2 flex justify-center items-center',
         onclick: () => changeDirFunc('ArrowDown')
       }, [
-          t('div', { className: 'mt-8 ml-8 -rotate-45 w-0 h-0 border-l-[50px] border-r-[50px] border-t-[75px] border-transparent border-t-white' }),
+          // t('div', { className: 'mt-8 ml-8 -rotate-45 w-0 h-0 border-l-[50px] border-r-[50px] border-t-[75px] border-transparent border-t-white' }),
         ]),
     ])
   ])

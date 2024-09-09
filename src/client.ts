@@ -214,6 +214,9 @@ function submitFunc(e: SubmitEvent) {
   ws.onmessage = (ws) => {
     const msg: ClientGameData = JSON.parse(ws.data);
     lastMsg = msg;
+    if (msg as any === 'TESTRES') {
+      return console.log('recieved test res')
+    }
 
     // Update player status
     document.querySelector('#gameState')!.textContent = fromCamelCase(msg.players[msg.uuid].state);

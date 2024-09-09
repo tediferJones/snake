@@ -15,27 +15,19 @@ function onScreenControls({ changeDirFunc }) {
       getTag("div", {
         className: "aspect-square bg-black m-2 flex justify-center items-center",
         onclick: () => changeDirFunc("ArrowUp")
-      }, [
-        getTag("div", { className: "mb-8 mr-8 -rotate-45 w-0 h-0 border-l-[50px] border-r-[50px] border-b-[75px] border-transparent border-b-white" })
-      ]),
+      }, []),
       getTag("div", {
         className: "aspect-square bg-black m-2 flex justify-center items-center",
         onclick: () => changeDirFunc("ArrowRight")
-      }, [
-        getTag("div", { className: "mb-8 ml-8 rotate-45 w-0 h-0 border-l-[50px] border-r-[50px] border-b-[75px] border-transparent border-b-white" })
-      ]),
+      }, []),
       getTag("div", {
         className: "aspect-square bg-black m-2 flex justify-center items-center",
         onclick: () => changeDirFunc("ArrowLeft")
-      }, [
-        getTag("div", { className: "mt-8 mr-8 rotate-45 w-0 h-0 border-l-[50px] border-r-[50px] border-t-[75px] border-transparent border-t-white" })
-      ]),
+      }, []),
       getTag("div", {
         className: "aspect-square bg-black m-2 flex justify-center items-center",
         onclick: () => changeDirFunc("ArrowDown")
-      }, [
-        getTag("div", { className: "mt-8 ml-8 -rotate-45 w-0 h-0 border-l-[50px] border-r-[50px] border-t-[75px] border-transparent border-t-white" })
-      ])
+      }, [])
     ])
   ]);
 }
@@ -117,6 +109,9 @@ var submitFunc = function(e) {
   ws.onmessage = (ws) => {
     const msg = JSON.parse(ws.data);
     lastMsg = msg;
+    if (msg === "TESTRES") {
+      return console.log("recieved test res");
+    }
     document.querySelector("#gameState").textContent = fromCamelCase(msg.players[msg.uuid].state);
     document.querySelector("#playerCount").textContent = `Player Count: ${Object.keys(msg.players).length.toString()}`;
     renders[msg.gameState](msg);

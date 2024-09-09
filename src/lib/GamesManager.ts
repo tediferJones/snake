@@ -33,6 +33,8 @@ export default class GamesManager {
         if (Object.keys(this.movements).includes(dir)) {
           ws.data.dir = dir as Directions;
         }
+        // ws.ping()
+        ws.send(JSON.stringify('TESTRES'))
       },
       toggleReady: (ws, msg) => {
         ws.data.state = ws.data.state === 'ready' ? 'notReady' : 'ready'
