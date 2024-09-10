@@ -34,7 +34,7 @@ export default class GamesManager {
           ws.data.dir = dir as Directions;
         }
         // ws.ping()
-        ws.send(JSON.stringify('TESTRES'))
+        // ws.send(JSON.stringify('TESTRES'))
       },
       toggleReady: (ws, msg) => {
         ws.data.state = ws.data.state === 'ready' ? 'notReady' : 'ready'

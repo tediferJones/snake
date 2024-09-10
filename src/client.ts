@@ -7,6 +7,14 @@ import t from '@/lib/getTag';
 let ws: WebSocket | undefined;
 let lastMsg: ClientGameData | undefined;
 
+let previousTime: number | undefined;
+let latStat = {
+  min: Infinity,
+  max: -Infinity,
+  total: 0,
+  count: 0,
+}
+
 const renderDirection = {
   ArrowUp: '-rotate-90',
   ArrowRight: 'rotate-0',
@@ -25,6 +33,20 @@ const drawPlayerSet = new Set(['playing', 'winner'])
 
 const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData) => void } = {
   running: (msg) => {
+    const currentTime = Date.now();
+    if (previousTime) {
+      const timeDiff = currentTime - previousTime;
+      console.log('Time between messages:', timeDiff)
+      if (timeDiff < latStat.min) latStat.min = timeDiff;
+      if (timeDiff > latStat.max) latStat.max = timeDiff;
+      latStat.total += timeDiff;
+      latStat.count += 1;
+      console.log('min', latStat.min)
+      console.log('max', latStat.max)
+      console.log('avg', latStat.total / latStat.count)
+    }
+    previousTime = currentTime
+
     document.querySelector('#onScreenControls')?.classList.remove('hidden');
     // Draw game board
     const boardElement = clearContainer('board');
@@ -89,9 +111,10 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
         t('div', { className: 'h-1/2 w-1/2 bg-black rotate-45'})
       )
     })
+    console.log('Draw time:', Date.now() - previousTime)
   },
   lobby: (msg) => {
-    console.log('rendering lobby', msg, msg.players[msg.uuid])
+    // console.log('rendering lobby', msg, msg.players[msg.uuid])
     const isReady = msg.players[msg.uuid].state === 'ready';
     clearContainer('leaderboard');
     const boardElement = clearContainer('board');
@@ -137,7 +160,7 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
           })
         ]),
         ...Object.values(msg.players)
-        .filter(player => player.pos.length > 0)
+        .filter(player => player.pos && player.pos.length > 0)
         .sort((a, b) => b.pos.length - a.pos.length)
         .map((player, i) => 
           t('div', { className: `flex gap-4 items-center justify-between p-4 w-full ${highlightColor[player.state]}` }, [

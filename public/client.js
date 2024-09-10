@@ -119,6 +119,13 @@ var submitFunc = function(e) {
 };
 var ws;
 var lastMsg;
+var previousTime;
+var latStat = {
+  min: Infinity,
+  max: (-Infinity),
+  total: 0,
+  count: 0
+};
 var renderDirection = {
   ArrowUp: "-rotate-90",
   ArrowRight: "rotate-0",
@@ -134,6 +141,21 @@ var roundingDir = {
 var drawPlayerSet = new Set(["playing", "winner"]);
 var renders = {
   running: (msg) => {
+    const currentTime = Date.now();
+    if (previousTime) {
+      const timeDiff = currentTime - previousTime;
+      console.log("Time between messages:", timeDiff);
+      if (timeDiff < latStat.min)
+        latStat.min = timeDiff;
+      if (timeDiff > latStat.max)
+        latStat.max = timeDiff;
+      latStat.total += timeDiff;
+      latStat.count += 1;
+      console.log("min", latStat.min);
+      console.log("max", latStat.max);
+      console.log("avg", latStat.total / latStat.count);
+    }
+    previousTime = currentTime;
     document.querySelector("#onScreenControls")?.classList.remove("hidden");
     const boardElement = clearContainer("board");
     boardElement.appendChild(board({ boardSize: msg.boardSize }));
@@ -198,9 +220,9 @@ var renders = {
     msg.foodLocations.forEach((coor) => {
       document.querySelector(`#cell-${coor.row}-${coor.col}`)?.append(getTag("div", { className: "h-1/2 w-1/2 bg-black rotate-45" }));
     });
+    console.log("Draw time:", Date.now() - previousTime);
   },
   lobby: (msg) => {
-    console.log("rendering lobby", msg, msg.players[msg.uuid]);
     const isReady = msg.players[msg.uuid].state === "ready";
     clearContainer("leaderboard");
     const boardElement = clearContainer("board");
@@ -242,7 +264,7 @@ var renders = {
           }
         })
       ]),
-      ...Object.values(msg.players).filter((player) => player.pos.length > 0).sort((a, b) => b.pos.length - a.pos.length).map((player, i) => getTag("div", { className: `flex gap-4 items-center justify-between p-4 w-full ${highlightColor[player.state]}` }, [
+      ...Object.values(msg.players).filter((player) => player.pos && player.pos.length > 0).sort((a, b) => b.pos.length - a.pos.length).map((player, i) => getTag("div", { className: `flex gap-4 items-center justify-between p-4 w-full ${highlightColor[player.state]}` }, [
         getTag("span", { textContent: `${i + 1}.)` }),
         getTag("span", { textContent: player.username, className: `text-xl font-bold` }),
         getTag("span", { textContent: player.pos.length.toString() })

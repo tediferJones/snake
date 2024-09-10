@@ -1,6 +1,6 @@
-import type { ClientGameData, ClientMsg } from '@/types';
+import type { ClientMsg } from '@/types';
 
-const playerCount = 16;
+const playerCount = 256 * 3;
 
 const dirs = [
   'ArrowUp',
@@ -15,7 +15,7 @@ const players: WebSocket[] = [];
 for (let i = 0; i < playerCount; i++) {
   openingQueue.push(
     new Promise((resolve, reject) => {
-      const ws = new WebSocket(`ws://localhost:3000/?gameCode=general&color=${[ ...Array(6).keys() ].map(() => Math.floor(Math.random() * 16).toString(16)).join('')}`)
+      const ws = new WebSocket(`ws://localhost:3000/?gameCode=general&color=${[ ...Array(6).keys() ].map(() => Math.floor(Math.random() * 16).toString(16)).join('')}&username=bot${i + 1}`)
       ws.onopen = () => {
         // players.push(ws);
         players[i] = ws
@@ -46,7 +46,7 @@ players.forEach(ws => {
 // const interval =
 setInterval(() => {
   players.forEach(ws => {
-    console.log(players.length)
+    // console.log(players.length)
     ws.send(JSON.stringify({
       action: 'changeDir',
       dir: dirs[Math.floor(Math.random() * dirs.length)],
