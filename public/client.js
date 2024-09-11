@@ -15,19 +15,27 @@ function onScreenControls({ changeDirFunc }) {
       getTag("div", {
         className: "aspect-square bg-black m-2 flex justify-center items-center",
         onclick: () => changeDirFunc("ArrowUp")
-      }, []),
+      }, [
+        getTag("div", { className: "mb-8 mr-8 -rotate-45 w-0 h-0 border-l-[20px] border-r-[20px] border-b-[30px] border-transparent border-b-white" })
+      ]),
       getTag("div", {
         className: "aspect-square bg-black m-2 flex justify-center items-center",
         onclick: () => changeDirFunc("ArrowRight")
-      }, []),
+      }, [
+        getTag("div", { className: "mb-8 ml-8 rotate-45 w-0 h-0 border-l-[20px] border-r-[20px] border-b-[30px] border-transparent border-b-white" })
+      ]),
       getTag("div", {
         className: "aspect-square bg-black m-2 flex justify-center items-center",
         onclick: () => changeDirFunc("ArrowLeft")
-      }, []),
+      }, [
+        getTag("div", { className: "mt-8 mr-8 rotate-45 w-0 h-0 border-l-[20px] border-r-[20px] border-t-[30px] border-transparent border-t-white" })
+      ]),
       getTag("div", {
         className: "aspect-square bg-black m-2 flex justify-center items-center",
         onclick: () => changeDirFunc("ArrowDown")
-      }, [])
+      }, [
+        getTag("div", { className: "mt-8 ml-8 -rotate-45 w-0 h-0 border-l-[20px] border-r-[20px] border-t-[30px] border-transparent border-t-white" })
+      ])
     ])
   ]);
 }
@@ -78,9 +86,8 @@ var changeDirection = function(dir) {
   if (!ws || ws.readyState > 1)
     return;
   console.log("sending websocket msg");
-  if (lastMsg?.players[lastMsg.uuid].state !== "playing") {
+  if (lastMsg?.players[lastMsg.uuid].state !== "playing")
     return;
-  }
   const verticalMoves = ["ArrowUp", "ArrowDown"];
   const horizontalMoves = ["ArrowRight", "ArrowLeft"];
   if (lastMsg) {
@@ -106,8 +113,8 @@ var submitFunc = function(e) {
   document.querySelector("#connectedInfo")?.classList.remove("hidden");
   console.log(color);
   ws = new WebSocket(`${protocol === "http:" ? "ws" : "wss"}://${host}?gameCode=${gameCode || "general"}&color=${color}&username=${username}`);
-  ws.onmessage = (ws) => {
-    const msg = JSON.parse(ws.data);
+  ws.onmessage = (e2) => {
+    const msg = JSON.parse(e2.data);
     lastMsg = msg;
     if (msg === "TESTRES") {
       return console.log("recieved test res");
@@ -115,6 +122,9 @@ var submitFunc = function(e) {
     document.querySelector("#gameState").textContent = fromCamelCase(msg.players[msg.uuid].state);
     document.querySelector("#playerCount").textContent = `Player Count: ${Object.keys(msg.players).length.toString()}`;
     renders[msg.gameState](msg);
+  };
+  ws.onclose = () => {
+    window.location.reload();
   };
 };
 var ws;
@@ -278,7 +288,7 @@ document.addEventListener("keydown", (e) => {
     changeDirection(e.key);
   }
 });
-document.body.className = "flex flex-col gap-8 justify-between max-w-screen";
+document.body.className = "flex flex-col gap-8 justify-between max-w-screen max-h-screen";
 document.body.append(getTag("div", { className: "p-8 border-b-2 flex-wrap" }, [
   getTag("form", { id: "connectForm", className: "flex flex-col justify-center items-center gap-8", onsubmit: submitFunc }, [
     getTag("label", { className: "flex items-center gap-4", textContent: "Pick you color:", htmlFor: "colorPicker" }, [

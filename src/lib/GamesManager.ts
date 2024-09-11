@@ -33,14 +33,14 @@ export default class GamesManager {
         if (Object.keys(this.movements).includes(dir)) {
           ws.data.dir = dir as Directions;
         }
-        // ws.ping()
-        // ws.send(JSON.stringify('TESTRES'))
+
+        // This improves latency on iOS devices, do not delete
+        ws.ping()
       },
       toggleReady: (ws, msg) => {
         ws.data.state = ws.data.state === 'ready' ? 'notReady' : 'ready'
         this.sendClientMsg(ws.data.gameCode)
 
-        
         if (
           Object.values(this.allGames[ws.data.gameCode].players).every(player => player.data.state === 'ready')
         ) {
@@ -101,7 +101,8 @@ export default class GamesManager {
     players.forEach((player, i) => {
       const index = i * 2;
       player.data.pos = [ openPos[index] ];
-      player.data.dir = this.getRandomDir();
+      // player.data.dir = this.getRandomDir();
+      player.data.dir = this.getRandomDirV2(openPos[index], gameInfo.boardSize);
       player.data.state = 'playing';
       gameInfo.foodLocations.push(openPos[index + 1]);
     });
@@ -120,9 +121,20 @@ export default class GamesManager {
     // console.log('CLOSED', this.allGames)
   }
 
-  getRandomDir() {
-    const dirs = Object.keys(this.movements) as Directions[];
-    return dirs[Math.floor(Math.random() * dirs.length)];
+  // getRandomDir() {
+  //   const dirs = Object.keys(this.movements) as Directions[];
+  //   return dirs[Math.floor(Math.random() * dirs.length)];
+  // }
+
+  getRandomDirV2(pos: Coordinate, boardSize: number) {
+    const { row, col } = pos;
+    const dirOpts: Directions[] = [];
+    dirOpts.push(row / boardSize >= 0.5 ? 'ArrowUp' : 'ArrowDown');
+    dirOpts.push(col / boardSize >= 0.5 ? 'ArrowLeft' : 'ArrowRight');
+    // const result = dirOpts[Math.floor(Math.random() * dirOpts.length)];
+    // console.log(result, boardSize, { row, col })
+    // return result
+    return dirOpts[Math.floor(Math.random() * dirOpts.length)];
   }
 
   getOpenPositions(gameCode: string, count: number) {

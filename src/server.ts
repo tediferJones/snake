@@ -1,6 +1,14 @@
 import type { Actions, ClientData, ClientMsg } from '@/types';
 import GamesManager from '@/lib/GamesManager';
 
+// TO-DO
+//
+// The end result of this project should diff the current and previous game state,
+// only sending the diff to the client (this should speed up client rendering)
+//
+// Latency seems to spike around 1028 users, find a reasonable maximum player count
+//  - At a certain point the board becomes too large to see which player is which anyways
+
 await Bun.build({
   entrypoints: [ 'src/client.ts' ],
   outdir: 'public/',

@@ -201,9 +201,7 @@ function invertHexColor(hex: string) {
 function changeDirection(dir: Directions) {
   if (!ws || ws.readyState > 1) return
   console.log('sending websocket msg')
-  if (lastMsg?.players[lastMsg.uuid].state !== 'playing') {
-    return
-  }
+  if (lastMsg?.players[lastMsg.uuid].state !== 'playing') return
 
   // If player is moving up and hits the up key, no point in sending that to server so it can be ignored
   // Likewise if player is moving left and hits the right key, that is an impossible move and should also be ignored
@@ -215,7 +213,7 @@ function changeDirection(dir: Directions) {
     if (verticalMoves.includes(dir) && verticalMoves.includes(currentDir)) return console.log('ignore vertical move')
     if (horizontalMoves.includes(dir) && horizontalMoves.includes(currentDir)) return console.log('ignore horizontal move')
   }
-  // ws.send(dir)
+
   ws.send(JSON.stringify({
     action: 'changeDir',
     dir: dir
@@ -234,8 +232,8 @@ function submitFunc(e: SubmitEvent) {
   console.log(color);
 
   ws = new WebSocket(`${protocol === 'http:' ? 'ws' : 'wss'}://${host}?gameCode=${gameCode || 'general'}&color=${color}&username=${username}`)
-  ws.onmessage = (ws) => {
-    const msg: ClientGameData = JSON.parse(ws.data);
+  ws.onmessage = (e) => {
+    const msg: ClientGameData = JSON.parse(e.data);
     lastMsg = msg;
     if (msg as any === 'TESTRES') {
       return console.log('recieved test res')
@@ -248,6 +246,9 @@ function submitFunc(e: SubmitEvent) {
     // Select render function based on gameState
     renders[msg.gameState](msg);
   }
+  ws.onclose = () => {
+    window.location.reload();
+  }
 }
 
 document.addEventListener('keydown', e => {
@@ -257,7 +258,7 @@ document.addEventListener('keydown', e => {
   }
 });
 
-document.body.className = 'flex flex-col gap-8 justify-between max-w-screen';
+document.body.className = 'flex flex-col gap-8 justify-between max-w-screen max-h-screen';
 
 document.body.append(
   // t('div', { className: 'p-8 flex flex-col gap-8 justify-between items-center border-b-2 flex-wrap' }, [
