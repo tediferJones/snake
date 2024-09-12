@@ -25,7 +25,7 @@ Bun.serve<ClientData>({
     let { pathname, searchParams } = new URL(req.url);
     console.log(req.url)
     if (server.upgrade(req, { data: {
-      gameCode: searchParams.get('gameCode'),
+      gameCode: searchParams.get('gameCode')?.toUpperCase(),
       color: searchParams.get('color'),
       username: searchParams.get('username')
     } })) return

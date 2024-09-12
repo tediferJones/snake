@@ -15,6 +15,8 @@ let latStat = {
   count: 0,
 }
 
+const gameCode = new URL(window.location.href).searchParams.get('gameCode');
+
 const renderDirection = {
   ArrowUp: '-rotate-90',
   ArrowRight: 'rotate-0',
@@ -121,6 +123,36 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
     boardElement.appendChild(
       t('div', { className: 'flex flex-col gap-8 items-center'}, [
         t('div', { textContent: `Players ready: ${Object.values(msg.players).filter(player => player.state === 'ready').length} / ${Object.keys(msg.players).length}` }),
+        t('button', {
+          className: 'flex border-2 rounded-xl border-black overflow-hidden',
+          // textContent: 'Share',
+          onclick: async (e) => {
+            if (lastMsg) {
+              const url = new URL(window.location.href)
+              url.searchParams.set('gameCode', lastMsg?.players[lastMsg.uuid].gameCode)
+              await navigator.clipboard.writeText(url.href);
+
+              document.querySelector('#buttonLeft')?.classList.toggle('min-w-full')
+              document.querySelector('#buttonLeft')?.classList.toggle('min-w-0')
+              document.querySelector('#buttonLeft')?.classList.toggle('px-0')
+              document.querySelector('#buttonRight')?.classList.toggle('min-w-0')
+              document.querySelector('#buttonRight')?.classList.toggle('min-w-full')
+              // document.querySelector('#buttonRight')?.classList.toggle('p-4')
+
+              setTimeout(() => {
+                document.querySelector('#buttonLeft')?.classList.toggle('min-w-full')
+                document.querySelector('#buttonLeft')?.classList.toggle('min-w-0')
+                document.querySelector('#buttonLeft')?.classList.toggle('px-0')
+                document.querySelector('#buttonRight')?.classList.toggle('min-w-0')
+                document.querySelector('#buttonRight')?.classList.toggle('min-w-full')
+                // document.querySelector('#buttonRight')?.classList.toggle('p-4')
+              }, 5000)
+            }
+          }
+        }, [
+            t('span', { id: 'buttonLeft', textContent: 'Share', className: 'p-4 transition-all duration-1000 bg-gray-200 min-w-full overflow-hidden' }),
+            t('span', { id: 'buttonRight', textContent: 'Copied', className: 'p-4 transition-all duration-1000 bg-gray-400 min-w-0 overflow-hidden' }),
+          ]),
         t('div', { className: `p-4 flex justify-center items-center gap-4 bg-gray-200 rounded-xl border-2 border-black` }, [
           t('div', { textContent: 'Are you ready?' }),
           t('button', {
@@ -224,7 +256,7 @@ function submitFunc(e: SubmitEvent) {
   e.preventDefault();
   const { host, protocol } = window.location;
   const color = (document.querySelector('#colorPicker') as HTMLInputElement).value.slice(1);
-  const gameCode = (document.querySelector('#gameCode') as HTMLInputElement).value.toUpperCase();
+  const gameCode = (document.querySelector('#gameCode') as HTMLInputElement).value;
   const username = (document.querySelector('#username') as HTMLInputElement).value;
   document.querySelector('#connectForm')?.classList.add('hidden');
   document.querySelector('#connectedInfo')?.classList.remove('hidden');
@@ -290,7 +322,8 @@ document.body.append(
           minLength: '5',
           maxLength: '5',
           required: false,
-          placeholder: 'Leave blank to enter general lobby'
+          placeholder: 'Leave blank to enter general lobby',
+          value: gameCode || ''
         }),
       ]),
       t('button', {

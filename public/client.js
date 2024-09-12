@@ -107,7 +107,7 @@ var submitFunc = function(e) {
   e.preventDefault();
   const { host, protocol } = window.location;
   const color = document.querySelector("#colorPicker").value.slice(1);
-  const gameCode = document.querySelector("#gameCode").value.toUpperCase();
+  const gameCode = document.querySelector("#gameCode").value;
   const username = document.querySelector("#username").value;
   document.querySelector("#connectForm")?.classList.add("hidden");
   document.querySelector("#connectedInfo")?.classList.remove("hidden");
@@ -136,6 +136,7 @@ var latStat = {
   total: 0,
   count: 0
 };
+var gameCode = new URL(window.location.href).searchParams.get("gameCode");
 var renderDirection = {
   ArrowUp: "-rotate-90",
   ArrowRight: "rotate-0",
@@ -238,6 +239,31 @@ var renders = {
     const boardElement = clearContainer("board");
     boardElement.appendChild(getTag("div", { className: "flex flex-col gap-8 items-center" }, [
       getTag("div", { textContent: `Players ready: ${Object.values(msg.players).filter((player) => player.state === "ready").length} / ${Object.keys(msg.players).length}` }),
+      getTag("button", {
+        className: "flex border-2 rounded-xl border-black overflow-hidden",
+        onclick: async (e) => {
+          if (lastMsg) {
+            const url = new URL(window.location.href);
+            url.searchParams.set("gameCode", lastMsg?.players[lastMsg.uuid].gameCode);
+            await navigator.clipboard.writeText(url.href);
+            document.querySelector("#buttonLeft")?.classList.toggle("min-w-full");
+            document.querySelector("#buttonLeft")?.classList.toggle("min-w-0");
+            document.querySelector("#buttonLeft")?.classList.toggle("px-0");
+            document.querySelector("#buttonRight")?.classList.toggle("min-w-0");
+            document.querySelector("#buttonRight")?.classList.toggle("min-w-full");
+            setTimeout(() => {
+              document.querySelector("#buttonLeft")?.classList.toggle("min-w-full");
+              document.querySelector("#buttonLeft")?.classList.toggle("min-w-0");
+              document.querySelector("#buttonLeft")?.classList.toggle("px-0");
+              document.querySelector("#buttonRight")?.classList.toggle("min-w-0");
+              document.querySelector("#buttonRight")?.classList.toggle("min-w-full");
+            }, 5000);
+          }
+        }
+      }, [
+        getTag("span", { id: "buttonLeft", textContent: "Share", className: "p-4 transition-all duration-1000 bg-gray-200 min-w-full overflow-hidden" }),
+        getTag("span", { id: "buttonRight", textContent: "Copied", className: "p-4 transition-all duration-1000 bg-gray-400 min-w-0 overflow-hidden" })
+      ]),
       getTag("div", { className: `p-4 flex justify-center items-center gap-4 bg-gray-200 rounded-xl border-2 border-black` }, [
         getTag("div", { textContent: "Are you ready?" }),
         getTag("button", {
@@ -316,7 +342,8 @@ document.body.append(getTag("div", { className: "p-8 border-b-2 flex-wrap" }, [
         minLength: "5",
         maxLength: "5",
         required: false,
-        placeholder: "Leave blank to enter general lobby"
+        placeholder: "Leave blank to enter general lobby",
+        value: gameCode || ""
       })
     ]),
     getTag("button", {
