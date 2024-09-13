@@ -1,8 +1,8 @@
 import t from '@/lib/getTag'
 
 export default function onScreenControls({ changeDirFunc }: { changeDirFunc: Function }) {
-  return t('div', { id: 'onScreenControls', className: 'mx-auto aspect-square w-3/4 flex justify-center items-center' }, [
-    t('div', { className: 'aspect-square w-3/4 grid grid-cols-2 mx-auto rotate-45' /*hidden'*/ }, [
+  return t('div', { id: 'onScreenControls', className: 'mx-auto aspect-square w-3/4 md:w-1/4 flex justify-center items-center hidden' }, [
+    t('div', { className: 'aspect-square w-3/4 grid grid-cols-2 mx-auto rotate-45' }, [
       t('div', {
         className: 'aspect-square bg-black m-2 flex justify-center items-center',
         onclick: () => changeDirFunc('ArrowUp')

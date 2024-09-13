@@ -125,12 +125,16 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
         t('div', { textContent: `Players ready: ${Object.values(msg.players).filter(player => player.state === 'ready').length} / ${Object.keys(msg.players).length}` }),
         t('button', {
           className: 'flex border-2 rounded-xl border-black overflow-hidden',
-          // textContent: 'Share',
           onclick: async (e) => {
+            console.log('button clicked')
             if (lastMsg) {
+              console.log('previous message exists')
               const url = new URL(window.location.href)
               url.searchParams.set('gameCode', lastMsg?.players[lastMsg.uuid].gameCode)
+              console.log(url.href);
               await navigator.clipboard.writeText(url.href);
+              // navigator.clipboard.writeText(idk.value).catch(err => console.log('error', err))
+              console.log('copied to clipboard')
 
               document.querySelector('#buttonLeft')?.classList.toggle('min-w-full')
               document.querySelector('#buttonLeft')?.classList.toggle('min-w-0')
@@ -150,14 +154,16 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
             }
           }
         }, [
+            t('input', { id: 'iosCopyHack', type: 'hidden' }),
             t('span', { id: 'buttonLeft', textContent: 'Share', className: 'p-4 transition-all duration-1000 bg-gray-200 min-w-full overflow-hidden' }),
             t('span', { id: 'buttonRight', textContent: 'Copied', className: 'p-4 transition-all duration-1000 bg-gray-400 min-w-0 overflow-hidden' }),
           ]),
         t('div', { className: `p-4 flex justify-center items-center gap-4 bg-gray-200 rounded-xl border-2 border-black` }, [
           t('div', { textContent: 'Are you ready?' }),
           t('button', {
-            textContent: '🖒',
-            className: `p-2 text-6xl transition-all duration-1000 border-2 rounded-xl ${isReady ? 'bg-green-300 text-green-500 border-green-500' : 'rotate-180 bg-red-300 text-red-500 border-red-500' }`,
+            // textContent: '🖒',
+            textContent: '👍',
+            className: `aspect-square p-2 text-6xl transition-all duration-1000 border-2 rounded-xl ${isReady ? 'bg-green-300 text-green-500 border-green-500' : 'rotate-180 bg-red-300 text-red-500 border-red-500' }`,
             onclick: () => {
               console.log('send ready toggle msg to server')
               ws?.send(JSON.stringify({ action: 'toggleReady' } satisfies ClientMsg))
@@ -183,8 +189,9 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
         t('div', { className: `p-4 flex justify-center items-center gap-4 bg-gray-200 rounded-xl border-2 border-black` }, [
           t('div', { textContent: 'Do you want a rematch?' }),
           t('button', {
-            textContent: '🖒',
-            className: `p-2 text-6xl transition-all duration-1000 border-2 rounded-xl ${rematch ? 'bg-green-300 text-green-500 border-green-500' : 'rotate-180 bg-red-300 text-red-500 border-red-500' }`,
+            // textContent: '🖒',
+            textContent: '👍',
+            className: `aspect-square p-2 text-6xl transition-all duration-1000 border-2 rounded-xl ${rematch ? 'bg-green-300 text-green-500 border-green-500' : 'rotate-180 bg-red-300 text-red-500 border-red-500' }`,
             onclick: () => {
               console.log('send ready toggle msg to server')
               ws?.send(JSON.stringify({ action: 'toggleRematch' } satisfies ClientMsg))
