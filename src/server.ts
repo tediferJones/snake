@@ -23,7 +23,7 @@ const GamesMan = new GamesManager();
 Bun.serve<ClientData>({
   fetch: async (req, server) => {
     let { pathname, searchParams } = new URL(req.url);
-    console.log(req.url)
+    if (process.env.DEBUG) console.log(req.url)
     if (server.upgrade(req, { data: {
       gameCode: searchParams.get('gameCode')?.toUpperCase(),
       color: searchParams.get('color'),

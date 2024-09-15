@@ -7,13 +7,13 @@ import t from '@/lib/getTag';
 let ws: WebSocket | undefined;
 let lastMsg: ClientGameData | undefined;
 
-let previousTime: number | undefined;
-let latStat = {
-  min: Infinity,
-  max: -Infinity,
-  total: 0,
-  count: 0,
-}
+// let previousTime: number | undefined;
+// let latStat = {
+//   min: Infinity,
+//   max: -Infinity,
+//   total: 0,
+//   count: 0,
+// }
 
 const gameCode = new URL(window.location.href).searchParams.get('gameCode');
 
@@ -35,19 +35,19 @@ const drawPlayerSet = new Set(['playing', 'winner'])
 
 const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData) => void } = {
   running: (msg) => {
-    const currentTime = Date.now();
-    if (previousTime) {
-      const timeDiff = currentTime - previousTime;
-      console.log('Time between messages:', timeDiff)
-      if (timeDiff < latStat.min) latStat.min = timeDiff;
-      if (timeDiff > latStat.max) latStat.max = timeDiff;
-      latStat.total += timeDiff;
-      latStat.count += 1;
-      console.log('min', latStat.min)
-      console.log('max', latStat.max)
-      console.log('avg', latStat.total / latStat.count)
-    }
-    previousTime = currentTime
+    // const currentTime = Date.now();
+    // if (previousTime) {
+    //   const timeDiff = currentTime - previousTime;
+    //   console.log('Time between messages:', timeDiff)
+    //   if (timeDiff < latStat.min) latStat.min = timeDiff;
+    //   if (timeDiff > latStat.max) latStat.max = timeDiff;
+    //   latStat.total += timeDiff;
+    //   latStat.count += 1;
+    //   console.log('min', latStat.min)
+    //   console.log('max', latStat.max)
+    //   console.log('avg', latStat.total / latStat.count)
+    // }
+    // previousTime = currentTime
 
     document.querySelector('#onScreenControls')?.classList.remove('hidden');
     // Draw game board
@@ -113,7 +113,7 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
         t('div', { className: 'h-1/2 w-1/2 bg-black rotate-45'})
       )
     })
-    console.log('Draw time:', Date.now() - previousTime)
+    // console.log('Draw time:', Date.now() - previousTime)
   },
   lobby: (msg) => {
     // console.log('rendering lobby', msg, msg.players[msg.uuid])
@@ -126,15 +126,11 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
         t('button', {
           className: 'flex border-2 rounded-xl border-black overflow-hidden',
           onclick: async (e) => {
-            console.log('button clicked')
             if (lastMsg) {
-              console.log('previous message exists')
               const url = new URL(window.location.href)
               url.searchParams.set('gameCode', lastMsg?.players[lastMsg.uuid].gameCode)
-              console.log(url.href);
               await navigator.clipboard.writeText(url.href);
               // navigator.clipboard.writeText(idk.value).catch(err => console.log('error', err))
-              console.log('copied to clipboard')
 
               document.querySelector('#buttonLeft')?.classList.toggle('min-w-full')
               document.querySelector('#buttonLeft')?.classList.toggle('min-w-0')
@@ -165,7 +161,7 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
             textContent: '👍',
             className: `aspect-square p-2 text-6xl transition-all duration-1000 border-2 rounded-xl ${isReady ? 'bg-green-300 text-green-500 border-green-500' : 'rotate-180 bg-red-300 text-red-500 border-red-500' }`,
             onclick: () => {
-              console.log('send ready toggle msg to server')
+              // console.log('send ready toggle msg to server')
               ws?.send(JSON.stringify({ action: 'toggleReady' } satisfies ClientMsg))
             }
           })
@@ -193,7 +189,7 @@ const renders: { [key in ClientGameData['gameState']]: (gameData: ClientGameData
             textContent: '👍',
             className: `aspect-square p-2 text-6xl transition-all duration-1000 border-2 rounded-xl ${rematch ? 'bg-green-300 text-green-500 border-green-500' : 'rotate-180 bg-red-300 text-red-500 border-red-500' }`,
             onclick: () => {
-              console.log('send ready toggle msg to server')
+              // console.log('send ready toggle msg to server')
               ws?.send(JSON.stringify({ action: 'toggleRematch' } satisfies ClientMsg))
             }
           })
@@ -239,7 +235,7 @@ function invertHexColor(hex: string) {
 
 function changeDirection(dir: Directions) {
   if (!ws || ws.readyState > 1) return
-  console.log('sending websocket msg')
+  // console.log('sending websocket msg')
   if (lastMsg?.players[lastMsg.uuid].state !== 'playing') return
 
   // If player is moving up and hits the up key, no point in sending that to server so it can be ignored
@@ -248,9 +244,9 @@ function changeDirection(dir: Directions) {
   const horizontalMoves: Directions[] = [ 'ArrowRight', 'ArrowLeft' ]
   if (lastMsg) {
     const currentDir = lastMsg.players[lastMsg.uuid].dir;
-    console.log('current player dir', currentDir)
-    if (verticalMoves.includes(dir) && verticalMoves.includes(currentDir)) return console.log('ignore vertical move')
-    if (horizontalMoves.includes(dir) && horizontalMoves.includes(currentDir)) return console.log('ignore horizontal move')
+    // console.log('current player dir', currentDir)
+    if (verticalMoves.includes(dir) && verticalMoves.includes(currentDir)) return // console.log('ignore vertical move')
+    if (horizontalMoves.includes(dir) && horizontalMoves.includes(currentDir)) return // console.log('ignore horizontal move')
   }
 
   ws.send(JSON.stringify({
@@ -268,15 +264,12 @@ function submitFunc(e: SubmitEvent) {
   document.querySelector('#connectForm')?.classList.add('hidden');
   document.querySelector('#connectedInfo')?.classList.remove('hidden');
   // document.querySelector('#onScreenControls')?.classList.remove('hidden');
-  console.log(color);
+  // console.log(color);
 
   ws = new WebSocket(`${protocol === 'http:' ? 'ws' : 'wss'}://${host}?gameCode=${gameCode || 'general'}&color=${color}&username=${username}`)
   ws.onmessage = (e) => {
     const msg: ClientGameData = JSON.parse(e.data);
     lastMsg = msg;
-    if (msg as any === 'TESTRES') {
-      return console.log('recieved test res')
-    }
 
     // Update player status
     document.querySelector('#gameState')!.textContent = fromCamelCase(msg.players[msg.uuid].state);
@@ -291,7 +284,7 @@ function submitFunc(e: SubmitEvent) {
 }
 
 document.addEventListener('keydown', e => {
-  console.log(e.key, lastMsg)
+  // console.log(e.key, lastMsg)
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
     changeDirection(e.key as Directions);
   }

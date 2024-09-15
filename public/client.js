@@ -85,18 +85,16 @@ var invertHexColor = function(hex) {
 var changeDirection = function(dir) {
   if (!ws || ws.readyState > 1)
     return;
-  console.log("sending websocket msg");
   if (lastMsg?.players[lastMsg.uuid].state !== "playing")
     return;
   const verticalMoves = ["ArrowUp", "ArrowDown"];
   const horizontalMoves = ["ArrowRight", "ArrowLeft"];
   if (lastMsg) {
     const currentDir = lastMsg.players[lastMsg.uuid].dir;
-    console.log("current player dir", currentDir);
     if (verticalMoves.includes(dir) && verticalMoves.includes(currentDir))
-      return console.log("ignore vertical move");
+      return;
     if (horizontalMoves.includes(dir) && horizontalMoves.includes(currentDir))
-      return console.log("ignore horizontal move");
+      return;
   }
   ws.send(JSON.stringify({
     action: "changeDir",
@@ -111,14 +109,10 @@ var submitFunc = function(e) {
   const username = document.querySelector("#username").value;
   document.querySelector("#connectForm")?.classList.add("hidden");
   document.querySelector("#connectedInfo")?.classList.remove("hidden");
-  console.log(color);
   ws = new WebSocket(`${protocol === "http:" ? "ws" : "wss"}://${host}?gameCode=${gameCode || "general"}&color=${color}&username=${username}`);
   ws.onmessage = (e2) => {
     const msg = JSON.parse(e2.data);
     lastMsg = msg;
-    if (msg === "TESTRES") {
-      return console.log("recieved test res");
-    }
     document.querySelector("#gameState").textContent = fromCamelCase(msg.players[msg.uuid].state);
     document.querySelector("#playerCount").textContent = `Player Count: ${Object.keys(msg.players).length.toString()}`;
     renders[msg.gameState](msg);
@@ -129,13 +123,6 @@ var submitFunc = function(e) {
 };
 var ws;
 var lastMsg;
-var previousTime;
-var latStat = {
-  min: Infinity,
-  max: (-Infinity),
-  total: 0,
-  count: 0
-};
 var gameCode = new URL(window.location.href).searchParams.get("gameCode");
 var renderDirection = {
   ArrowUp: "-rotate-90",
@@ -152,21 +139,6 @@ var roundingDir = {
 var drawPlayerSet = new Set(["playing", "winner"]);
 var renders = {
   running: (msg) => {
-    const currentTime = Date.now();
-    if (previousTime) {
-      const timeDiff = currentTime - previousTime;
-      console.log("Time between messages:", timeDiff);
-      if (timeDiff < latStat.min)
-        latStat.min = timeDiff;
-      if (timeDiff > latStat.max)
-        latStat.max = timeDiff;
-      latStat.total += timeDiff;
-      latStat.count += 1;
-      console.log("min", latStat.min);
-      console.log("max", latStat.max);
-      console.log("avg", latStat.total / latStat.count);
-    }
-    previousTime = currentTime;
     document.querySelector("#onScreenControls")?.classList.remove("hidden");
     const boardElement = clearContainer("board");
     boardElement.appendChild(board({ boardSize: msg.boardSize }));
@@ -231,7 +203,6 @@ var renders = {
     msg.foodLocations.forEach((coor) => {
       document.querySelector(`#cell-${coor.row}-${coor.col}`)?.append(getTag("div", { className: "h-1/2 w-1/2 bg-black rotate-45" }));
     });
-    console.log("Draw time:", Date.now() - previousTime);
   },
   lobby: (msg) => {
     const isReady = msg.players[msg.uuid].state === "ready";
@@ -242,14 +213,10 @@ var renders = {
       getTag("button", {
         className: "flex border-2 rounded-xl border-black overflow-hidden",
         onclick: async (e) => {
-          console.log("button clicked");
           if (lastMsg) {
-            console.log("previous message exists");
             const url = new URL(window.location.href);
             url.searchParams.set("gameCode", lastMsg?.players[lastMsg.uuid].gameCode);
-            console.log(url.href);
             await navigator.clipboard.writeText(url.href);
-            console.log("copied to clipboard");
             document.querySelector("#buttonLeft")?.classList.toggle("min-w-full");
             document.querySelector("#buttonLeft")?.classList.toggle("min-w-0");
             document.querySelector("#buttonLeft")?.classList.toggle("px-0");
@@ -275,7 +242,6 @@ var renders = {
           textContent: "\uD83D\uDC4D",
           className: `aspect-square p-2 text-6xl transition-all duration-1000 border-2 rounded-xl ${isReady ? "bg-green-300 text-green-500 border-green-500" : "rotate-180 bg-red-300 text-red-500 border-red-500"}`,
           onclick: () => {
-            console.log("send ready toggle msg to server");
             ws?.send(JSON.stringify({ action: "toggleReady" }));
           }
         })
@@ -300,7 +266,6 @@ var renders = {
           textContent: "\uD83D\uDC4D",
           className: `aspect-square p-2 text-6xl transition-all duration-1000 border-2 rounded-xl ${rematch ? "bg-green-300 text-green-500 border-green-500" : "rotate-180 bg-red-300 text-red-500 border-red-500"}`,
           onclick: () => {
-            console.log("send ready toggle msg to server");
             ws?.send(JSON.stringify({ action: "toggleRematch" }));
           }
         })
@@ -314,7 +279,6 @@ var renders = {
   }
 };
 document.addEventListener("keydown", (e) => {
-  console.log(e.key, lastMsg);
   if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
     changeDirection(e.key);
   }

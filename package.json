@@ -10,7 +10,8 @@
     "typescript": "^5.0.0"
   },
   "scripts": {
-    "dev": "bun nodemon"
+    "start": "bun run src/server.ts",
+    "dev": "DEBUG=true bun nodemon"
   },
   "type": "module"
 }
