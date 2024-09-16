@@ -60,8 +60,13 @@ export default class GamesManager {
         if (
           Object.values(gameInfo.players).every(player => player.data.state === 'rematch')
         ) {
-          Object.values(gameInfo.players).forEach(player => player.data.state = 'notReady')
-          gameInfo.gameState = 'lobby'
+          // Object.values(gameInfo.players).forEach(player => player.data.state = 'notReady')
+          Object.values(gameInfo.players).forEach(player => {
+            player.data.state = 'notReady';
+            player.data.pos = [];
+          })
+          gameInfo.gameState = 'lobby';
+          // gameInfo.foodLocations = [];
         }
         this.sendClientMsg(ws.data.gameCode)
       }
@@ -97,10 +102,12 @@ export default class GamesManager {
     gameInfo.boardSize = Math.floor(Math.sqrt((this.defaultBoardSize ** 2) * players.length + 1));
     gameInfo.gameState = 'running';
     const openPos = this.getOpenPositions(gameCode, players.length * 2);
+    // console.log('gameInfo', gameInfo)
 
     players.forEach((player, i) => {
       const index = i * 2;
       player.data.pos = [ openPos[index] ];
+      // console.log('starting game', openPos, player.data.pos)
       // player.data.dir = this.getRandomDir();
       player.data.dir = this.getRandomDirV2(openPos[index], gameInfo.boardSize);
       player.data.state = 'playing';
@@ -121,19 +128,11 @@ export default class GamesManager {
     // console.log('CLOSED', this.allGames)
   }
 
-  // getRandomDir() {
-  //   const dirs = Object.keys(this.movements) as Directions[];
-  //   return dirs[Math.floor(Math.random() * dirs.length)];
-  // }
-
   getRandomDirV2(pos: Coordinate, boardSize: number) {
     const { row, col } = pos;
     const dirOpts: Directions[] = [];
     dirOpts.push(row / boardSize >= 0.5 ? 'ArrowUp' : 'ArrowDown');
     dirOpts.push(col / boardSize >= 0.5 ? 'ArrowLeft' : 'ArrowRight');
-    // const result = dirOpts[Math.floor(Math.random() * dirOpts.length)];
-    // console.log(result, boardSize, { row, col })
-    // return result
     return dirOpts[Math.floor(Math.random() * dirOpts.length)];
   }
 
@@ -194,6 +193,16 @@ export default class GamesManager {
         const { pos, dir } = player.data;
         const newRow = pos[0].row + this.movements[dir].row;
         const newCol = pos[0].col + this.movements[dir].col;
+
+        // If new position is on food, remove that food location and DONT pop the player's tail position
+        // This will result the in the players length growing (we add to the head and dont remove from the tail)
+        const foundFood = gameInfo.foodLocations.findIndex(coor => coor.row === newRow && coor.col === newCol);
+        if (foundFood !== -1) {
+          gameInfo.foodLocations.splice(foundFood, 1);
+        } else {
+          player.data.pos.pop();
+        }
+
         const usedPositions = Object.values(gameInfo.players).flatMap(
           player => player.data.state === 'playing' ? player.data.pos : []
         );
@@ -212,15 +221,6 @@ export default class GamesManager {
 
         // Add new pos to head of player pos
         player.data.pos.unshift({ row: newRow, col: newCol });
-
-        // If new position is on food, remove that food location and DONT pop the player's tail position
-        // This will result the in the players length growing (we add to the head and dont remove from the tail)
-        const foundFood = gameInfo.foodLocations.findIndex(coor => coor.row === newRow && coor.col === newCol);
-        if (foundFood !== -1) {
-          gameInfo.foodLocations.splice(foundFood, 1);
-        } else {
-          player.data.pos.pop();
-        }
       });
 
       if (Object.values(gameInfo.players).every(player => player.data.state !== 'playing')) {

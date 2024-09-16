@@ -8,12 +8,18 @@ import GamesManager from '@/lib/GamesManager';
 //
 // Latency seems to spike around 1028 users, find a reasonable maximum player count
 //  - At a certain point the board becomes too large to see which player is which anyways
+//
+//  [ DONE ] Player should be able to make an exact circle, i.e. pop tail then determine if next move can be made
+//  [ DONE ] Fix issue where when player winners previous game, and they rematch, server crashes when new game leaves lobby
+//    - [ DONE ] Investigate getRandomDirV2 function in gamesManager
+//  There is still a problem with player collisions
+//    - One player can make a perfect circle, but two players cannot because tails are popped sequentially as we iterate through players
 
 await Bun.build({
   entrypoints: [ 'src/client.ts' ],
   outdir: 'public/',
-  // minify: true,
-  // splitting: true,
+  minify: true,
+  splitting: true,
 })
 
 Bun.spawnSync('bunx tailwindcss -i src/globals.css -o public/style.css --minify'.split(' '))
